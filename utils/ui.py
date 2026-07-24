@@ -4,6 +4,10 @@ from utils.trade import get_user_portfolio_summary
 from utils.auth import get_user
 from utils.date_utils import get_korea_now_str
 from utils.checkin import get_user_checkin_status
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+LOGO_PATH = ROOT_DIR / "assets" / "konkuk_logo.jpg"
 
 def apply_custom_theme():
     st.markdown("""
@@ -16,8 +20,23 @@ def apply_custom_theme():
     }
     
     /* Bright Theme Background */
-    .stApp {
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"] {
         background-color: #F7F9F8 !important;
+        color: #1F2937 !important;
+    }
+
+    [data-testid="stHeader"] {
+        background-color: #F7F9F8 !important;
+    }
+
+    section[data-testid="stSidebar"] {
+        background-color: #FFFFFF !important;
+        border-right: 1px solid #E5E7EB !important;
+    }
+
+    section[data-testid="stSidebar"] * {
         color: #1F2937 !important;
     }
     
@@ -171,17 +190,31 @@ def render_header():
     col_title, col_user = st.columns([1.8, 2.2])
     
     with col_title:
-        st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 14px;">
-            <img src="file:///{os.path.abspath(logo_path).replace('\\', '/')}" style="height: 52px; border-radius: 8px; object-fit: contain;" alt="건국대학교 로고">
-            <div>
-                <h2 style="margin: 0; padding: 0; font-weight: 800; color: #00703E; font-size: 1.5rem;">
-                    공과대학 전공박람회 주식 시장
-                </h2>
-                <div style="font-size: 0.85rem; color: #6B7280; font-weight: 500;">건국대학교 공과대학 학과 모의 주식 거래소</div>
+        logo_col, text_col = st.columns([1, 4])
+
+        with logo_col:
+            st.image(str(LOGO_PATH), use_container_width=True)
+
+        with text_col:
+            st.markdown("""
+            <h2 style="
+                margin: 0;
+                padding: 0;
+                font-weight: 800;
+                color: #00703E;
+                font-size: 1.5rem;
+            ">
+                공과대학 전공박람회 주식 시장
+            </h2>
+
+            <div style="
+                font-size: 0.85rem;
+                color: #6B7280;
+                font-weight: 500;
+            ">
+                건국대학교 공과대학 학과 모의 주식 거래소
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
     with col_user:
         if user:

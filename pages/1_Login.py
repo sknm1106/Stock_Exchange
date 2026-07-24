@@ -10,6 +10,7 @@ from utils.auth import login_user
 from utils.ui import apply_custom_theme
 from utils.checkin import process_checkin
 from utils.database import fetch_one
+from pathlib import Path
 
 st.set_page_config(
     page_title="로그인 | 공과대학 전공박람회 주식 시장",
@@ -19,7 +20,7 @@ st.set_page_config(
 
 apply_custom_theme()
 
-logo_path = "assets/konkuk_logo.jpg"
+LOGO_PATH = Path(ROOT_DIR) / "assets" / "konkuk_logo.jpg"
 
 # Check URL Query Parameters for Department QR scan or Staff mode
 query_params = st.query_params
@@ -32,7 +33,10 @@ col1, col2, col3 = st.columns([1, 2.2, 1])
 with col2:
     st.markdown(f"""
     <div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
-        <img src="file:///{os.path.abspath(logo_path).replace('\\', '/')}" style="height: 75px; margin-bottom: 12px; object-fit: contain;" alt="건국대학교 로고">
+        st.image(
+            str(LOGO_PATH),
+            width=300
+        )
         <h1 style="font-size: 2.2rem; font-weight: 800; color: #00703E; margin-bottom: 6px;">
             공과대학 전공박람회 주식 시장
         </h1>
