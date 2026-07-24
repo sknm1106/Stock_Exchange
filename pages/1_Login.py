@@ -1,5 +1,6 @@
 import os
 import sys
+import base64
 from pathlib import Path
 
 import streamlit as st
@@ -59,30 +60,6 @@ mode_staff = query_params.get("mode") == "staff"
 
 
 # =========================================================
-# 로그인 화면 추가 스타일
-# =========================================================
-st.markdown(
-    """
-    <style>
-        div[data-testid="stImage"],
-        div[data-testid="stImageContainer"] {
-            display: flex !important;
-            justify-content: center !important;
-            width: 100% !important;
-        }
-
-        div[data-testid="stImage"] img,
-        div[data-testid="stImageContainer"] img {
-            display: block !important;
-            margin: 0 auto !important;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-
-# =========================================================
 # 전체 화면 중앙 배치
 # =========================================================
 col1, col2, col3 = st.columns([1, 2.2, 1])
@@ -90,12 +67,36 @@ col1, col2, col3 = st.columns([1, 2.2, 1])
 with col2:
 
     # -----------------------------------------------------
-    # 학교 로고
+    # 학교 로고: HTML로 직접 출력해 제목 위 정가운데 고정
     # -----------------------------------------------------
     if LOGO_PATH.exists():
-        st.image(
-            str(LOGO_PATH),
-            width=50
+        logo_base64 = base64.b64encode(
+            LOGO_PATH.read_bytes()
+        ).decode("utf-8")
+
+        st.markdown(
+            f"""
+            <div style="
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-top: 40px;
+                margin-bottom: 10px;
+            ">
+                <img
+                    src="data:image/png;base64,{logo_base64}"
+                    alt="건국대학교 로고"
+                    style="
+                        display: block;
+                        width: 70px;
+                        height: auto;
+                        margin: 0;
+                    "
+                >
+            </div>
+            """,
+            unsafe_allow_html=True
         )
     else:
         st.warning(
