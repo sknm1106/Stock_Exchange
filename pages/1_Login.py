@@ -64,13 +64,17 @@ mode_staff = query_params.get("mode") == "staff"
 st.markdown(
     """
     <style>
-        div[data-testid="stImage"] {
-            display: flex;
-            justify-content: center;
+        div[data-testid="stImage"],
+        div[data-testid="stImageContainer"] {
+            display: flex !important;
+            justify-content: center !important;
+            width: 100% !important;
         }
 
-        div[data-testid="stImage"] img {
-            margin: 0 auto;
+        div[data-testid="stImage"] img,
+        div[data-testid="stImageContainer"] img {
+            display: block !important;
+            margin: 0 auto !important;
         }
     </style>
     """,
@@ -91,7 +95,7 @@ with col2:
     if LOGO_PATH.exists():
         st.image(
             str(LOGO_PATH),
-            width=145
+            width=50
         )
     else:
         st.warning(
@@ -217,8 +221,7 @@ with col2:
     # 상품 안내
     # =====================================================
     st.markdown(
-        """
-        <div style="
+        """<div style="
             background: #FFFFFF;
             border: 1px solid #E5E7EB;
             border-radius: 16px;
@@ -232,10 +235,7 @@ with col2:
                 color: #00703E;
                 text-align: center;
                 margin-bottom: 16px;
-            ">
-                상품 안내
-            </div>
-
+            ">상품 안내</div>
             <div style="
                 display: flex;
                 justify-content: space-around;
@@ -249,29 +249,20 @@ with col2:
                     border-radius: 12px;
                     border: 1px solid #E5E7EB;
                 ">
-                    <div style="font-size: 1.4rem;">
-                        🥇
-                    </div>
-
+                    <div style="font-size: 1.4rem;">🥇</div>
                     <div style="
                         font-weight: 700;
                         font-size: 0.95rem;
                         color: #00703E;
                         margin-top: 4px;
-                    ">
-                        1등 상품
-                    </div>
-
+                    ">1등 상품</div>
                     <div style="
                         font-size: 0.85rem;
                         font-weight: 600;
                         color: #1F2937;
                         margin-top: 2px;
-                    ">
-                        에어팟
-                    </div>
+                    ">에어팟</div>
                 </div>
-
                 <div style="
                     flex: 1;
                     background: #F7F9F8;
@@ -279,29 +270,20 @@ with col2:
                     border-radius: 12px;
                     border: 1px solid #E5E7EB;
                 ">
-                    <div style="font-size: 1.4rem;">
-                        🥈
-                    </div>
-
+                    <div style="font-size: 1.4rem;">🥈</div>
                     <div style="
                         font-weight: 700;
                         font-size: 0.95rem;
                         color: #00703E;
                         margin-top: 4px;
-                    ">
-                        2등 상품
-                    </div>
-
+                    ">2등 상품</div>
                     <div style="
                         font-size: 0.85rem;
                         font-weight: 600;
                         color: #1F2937;
                         margin-top: 2px;
-                    ">
-                        스마트 워치
-                    </div>
+                    ">스마트 워치</div>
                 </div>
-
                 <div style="
                     flex: 1;
                     background: #F7F9F8;
@@ -309,33 +291,25 @@ with col2:
                     border-radius: 12px;
                     border: 1px solid #E5E7EB;
                 ">
-                    <div style="font-size: 1.4rem;">
-                        🥉
-                    </div>
-
+                    <div style="font-size: 1.4rem;">🥉</div>
                     <div style="
                         font-weight: 700;
                         font-size: 0.95rem;
                         color: #00703E;
                         margin-top: 4px;
-                    ">
-                        3등 상품
-                    </div>
-
+                    ">3등 상품</div>
                     <div style="
                         font-size: 0.85rem;
                         font-weight: 600;
                         color: #1F2937;
                         margin-top: 2px;
-                    ">
-                        스타벅스 2만원 상품권
-                    </div>
+                    ">스타벅스 2만원 상품권</div>
                 </div>
             </div>
-        </div>
-        """,
+        </div>""",
         unsafe_allow_html=True
     )
+
 
     # =====================================================
     # 이미 로그인된 경우
