@@ -430,13 +430,13 @@ with col2:
                                 target_dept_info["id"]
                             )
 
-                            st.session_state[
-                                "last_checkin_res"
-                            ] = checkin_result
+                            st.session_state["last_checkin_res"] = checkin_result
+                            st.session_state["selected_dept_id"] = target_dept_info["id"]
+                            st.session_state["qr_target_dept_id"] = target_dept_info["id"]
+                            st.switch_page("pages/3_Department.py")
+                            st.stop()
 
-                        st.switch_page(
-                            "pages/2_Home.py"
-                        )
+                        st.switch_page("pages/2_Home.py")
 
         # =================================================
         # 하단 안내 문구

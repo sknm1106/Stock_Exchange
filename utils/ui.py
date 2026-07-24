@@ -1,5 +1,8 @@
-import streamlit as st
+import base64
 import os
+from pathlib import Path
+
+import streamlit as st
 from utils.trade import get_user_portfolio_summary
 from utils.auth import get_user
 from utils.date_utils import get_korea_now_str
@@ -8,6 +11,22 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 LOGO_PATH = ROOT_DIR / "assets" / "konkuk_logo.png"
+
+
+def render_logo_html(width: int = 70) -> None:
+    if not LOGO_PATH.exists():
+        return
+
+    logo_base64 = base64.b64encode(LOGO_PATH.read_bytes()).decode("utf-8")
+    st.markdown(
+        f"""
+        <div style="display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+            <img src="data:image/png;base64,{logo_base64}" alt="Konkuk logo" style="display:block;width:{width}px;height:auto;">
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 def apply_custom_theme():
     st.markdown("""
@@ -193,7 +212,7 @@ def render_header():
         logo_col, text_col = st.columns([1, 4])
 
         with logo_col:
-            st.image(str(LOGO_PATH), use_container_width=True)
+            render_logo_html(width=70)
 
         with text_col:
             st.markdown("""

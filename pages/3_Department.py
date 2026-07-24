@@ -157,22 +157,6 @@ with col_trade:
             step=1,
             key="buy_qty_input"
         )
-        
-        # Helper quick quantity buttons
-        col_q1, col_q2, col_q3 = st.columns(3)
-        with col_q1:
-            if st.button("25% 매수", key="buy_25_btn", use_container_width=True):
-                st.session_state['buy_qty_input'] = max(1, int(max_buy_qty * 0.25))
-                st.rerun()
-        with col_q2:
-            if st.button("50% 매수", key="buy_50_btn", use_container_width=True):
-                st.session_state['buy_qty_input'] = max(1, int(max_buy_qty * 0.50))
-                st.rerun()
-        with col_q3:
-            if st.button("최대 매수", key="buy_100_btn", use_container_width=True):
-                st.session_state['buy_qty_input'] = max(1, max_buy_qty)
-                st.rerun()
-
         total_buy_cost = buy_qty * current_price
         st.markdown(f"""
         <div style="background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.3); padding: 14px; border-radius: 10px; margin: 15px 0;">
@@ -200,21 +184,6 @@ with col_trade:
             step=1,
             key="sell_qty_input"
         )
-        
-        col_sq1, col_sq2, col_sq3 = st.columns(3)
-        with col_sq1:
-            if st.button("25% 매도", key="sell_25_btn", use_container_width=True):
-                st.session_state['sell_qty_input'] = max(1, int(holding_qty * 0.25))
-                st.rerun()
-        with col_sq2:
-            if st.button("50% 매도", key="sell_50_btn", use_container_width=True):
-                st.session_state['sell_qty_input'] = max(1, int(holding_qty * 0.50))
-                st.rerun()
-        with col_sq3:
-            if st.button("전량 매도", key="sell_100_btn", use_container_width=True):
-                st.session_state['sell_qty_input'] = max(1, holding_qty)
-                st.rerun()
-
         total_sell_income = sell_qty * current_price
         st.markdown(f"""
         <div style="background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.3); padding: 14px; border-radius: 10px; margin: 15px 0;">
