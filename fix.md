@@ -73,7 +73,7 @@
 대신 다음 학교 로고 이미지를 표시합니다.
 
 ```text
-assets/konkuk_logo.jpg
+assets/konkuk_logo.png
 ```
 
 #### 헤더 제목 변경

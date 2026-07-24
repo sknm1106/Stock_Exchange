@@ -4,11 +4,17 @@ from pathlib import Path
 
 import streamlit as st
 
+
+# =========================================================
 # 프로젝트 루트 경로 설정
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# =========================================================
+ROOT_DIR = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
 
 if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
+
 
 from utils.auth import login_user
 from utils.ui import apply_custom_theme
@@ -31,7 +37,11 @@ apply_custom_theme()
 # =========================================================
 # 학교 로고 경로
 # =========================================================
-LOGO_PATH = Path(ROOT_DIR) / "assets" / "konkuk_logo.jpg"
+LOGO_PATH = (
+    Path(ROOT_DIR)
+    / "assets"
+    / "konkuk_logo.png"
+)
 
 
 # =========================================================
@@ -49,7 +59,7 @@ mode_staff = query_params.get("mode") == "staff"
 
 
 # =========================================================
-# 로고 가운데 정렬용 CSS
+# 로그인 화면 추가 스타일
 # =========================================================
 st.markdown(
     """
@@ -57,6 +67,10 @@ st.markdown(
         div[data-testid="stImage"] {
             display: flex;
             justify-content: center;
+        }
+
+        div[data-testid="stImage"] img {
+            margin: 0 auto;
         }
     </style>
     """,
@@ -77,43 +91,46 @@ with col2:
     if LOGO_PATH.exists():
         st.image(
             str(LOGO_PATH),
-            width=300
+            width=145
         )
     else:
         st.warning(
             "학교 로고 파일을 찾을 수 없습니다. "
-            "assets/konkuk_logo.jpg 경로를 확인해주세요."
+            "assets/konkuk_logo.png 경로를 확인해주세요."
         )
 
     # -----------------------------------------------------
     # 서비스 제목
+    # HTML을 분리해 태그가 문자로 출력되는 문제 방지
     # -----------------------------------------------------
     st.markdown(
         """
-        <div style="
+        <h1 style="
             text-align: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #00703E;
             margin-top: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 6px;
         ">
-            <h1 style="
-                font-size: 2.2rem;
-                font-weight: 800;
-                color: #00703E;
-                margin-top: 0;
-                margin-bottom: 6px;
-            ">
-                공과대학 전공박람회 주식 시장
-            </h1>
+            공과대학 전공박람회 주식 시장
+        </h1>
+        """,
+        unsafe_allow_html=True
+    )
 
-            <p style="
-                color: #6B7280;
-                font-size: 1.05rem;
-                font-weight: 500;
-                margin-top: 0;
-            ">
-                건국대학교 공과대학 학과 모의 주식 거래소
-            </p>
-        </div>
+    st.markdown(
+        """
+        <p style="
+            text-align: center;
+            color: #6B7280;
+            font-size: 1.05rem;
+            font-weight: 500;
+            margin-top: 0;
+            margin-bottom: 24px;
+        ">
+            건국대학교 공과대학 학과 모의 주식 거래소
+        </p>
         """,
         unsafe_allow_html=True
     )
@@ -128,7 +145,11 @@ with col2:
 
         if qr_dept.isdigit():
             target_dept_info = fetch_one(
-                "SELECT * FROM departments WHERE id = ?",
+                """
+                SELECT *
+                FROM departments
+                WHERE id = ?
+                """,
                 (int(qr_dept),)
             )
         else:
@@ -212,7 +233,7 @@ with col2:
                 text-align: center;
                 margin-bottom: 16px;
             ">
-                [상품 안내
+                상품 안내
             </div>
 
             <div style="
@@ -228,7 +249,9 @@ with col2:
                     border-radius: 12px;
                     border: 1px solid #E5E7EB;
                 ">
-                    <div style="font-size: 1.4rem;">🥇</div>
+                    <div style="font-size: 1.4rem;">
+                        🥇
+                    </div>
 
                     <div style="
                         font-weight: 700;
@@ -256,7 +279,9 @@ with col2:
                     border-radius: 12px;
                     border: 1px solid #E5E7EB;
                 ">
-                    <div style="font-size: 1.4rem;">🥈</div>
+                    <div style="font-size: 1.4rem;">
+                        🥈
+                    </div>
 
                     <div style="
                         font-weight: 700;
@@ -284,7 +309,9 @@ with col2:
                     border-radius: 12px;
                     border: 1px solid #E5E7EB;
                 ">
-                    <div style="font-size: 1.4rem;">🥉</div>
+                    <div style="font-size: 1.4rem;">
+                        🥉
+                    </div>
 
                     <div style="
                         font-weight: 700;
@@ -381,26 +408,42 @@ with col2:
                 name = name_input.strip()
 
                 if not sid or not name:
-                    st.error("학번과 이름을 모두 입력해주세요.")
+                    st.error(
+                        "학번과 이름을 모두 입력해주세요."
+                    )
 
                 else:
                     # -------------------------------------
                     # 관리자 로그인
                     # -------------------------------------
-                    if sid == "admin777" and name == "admin777":
-                        user_data, _ = login_user(sid, name)
+                    if (
+                        sid == "admin777"
+                        and name == "admin777"
+                    ):
+                        user_data, _ = login_user(
+                            sid,
+                            name
+                        )
 
                         st.session_state["user"] = user_data
                         st.session_state["is_admin"] = True
 
-                        st.success("✅ 관리자 계정으로 로그인되었습니다.")
-                        st.switch_page("pages/5_Admin.py")
+                        st.success(
+                            "✅ 관리자 계정으로 로그인되었습니다."
+                        )
+
+                        st.switch_page(
+                            "pages/5_Admin.py"
+                        )
 
                     # -------------------------------------
                     # 학생 로그인
                     # -------------------------------------
                     else:
-                        user_data, is_new = login_user(sid, name)
+                        user_data, is_new = login_user(
+                            sid,
+                            name
+                        )
 
                         st.session_state["user"] = user_data
                         st.session_state["is_admin"] = False
@@ -412,11 +455,13 @@ with col2:
                                 target_dept_info["id"]
                             )
 
-                            st.session_state["last_checkin_res"] = (
-                                checkin_result
-                            )
+                            st.session_state[
+                                "last_checkin_res"
+                            ] = checkin_result
 
-                        st.switch_page("pages/2_Home.py")
+                        st.switch_page(
+                            "pages/2_Home.py"
+                        )
 
         # =================================================
         # 하단 안내 문구

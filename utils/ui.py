@@ -7,7 +7,7 @@ from utils.checkin import get_user_checkin_status
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-LOGO_PATH = ROOT_DIR / "assets" / "konkuk_logo.jpg"
+LOGO_PATH = ROOT_DIR / "assets" / "konkuk_logo.png"
 
 def apply_custom_theme():
     st.markdown("""
@@ -184,7 +184,7 @@ def render_header():
             user = refreshed_user
 
     now_str = get_korea_now_str()
-    logo_path = "assets/konkuk_logo.jpg"
+    logo_path = "assets/konkuk_logo.png"
     
     # Grid layout for Header
     col_title, col_user = st.columns([1.8, 2.2])
