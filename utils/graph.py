@@ -4,15 +4,15 @@ import pandas as pd
 
 def create_price_chart(history_data, dept_name="학과"):
     """
-    Creates an interactive, beautiful dark-themed Plotly line/area chart for department price history.
+    Creates an interactive, beautiful bright-themed Plotly line/area chart for department price history.
     """
     if not history_data:
         fig = go.Figure()
         fig.update_layout(
-            template="plotly_dark",
+            template="plotly_white",
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            annotations=[dict(text="가격 데이터가 없습니다", showarrow=False, font=dict(size=16))]
+            annotations=[dict(text="가격 데이터가 없습니다", showarrow=False, font=dict(size=16, color="#6B7280"))]
         )
         return fig
 
@@ -24,8 +24,8 @@ def create_price_chart(history_data, dept_name="학과"):
     last_price = df['price'].iloc[-1]
     is_positive = last_price >= first_price
 
-    line_color = "#00C076" if is_positive else "#FF4D4D"  # Emerald Green vs Crimson Red
-    fill_color = "rgba(0, 192, 118, 0.15)" if is_positive else "rgba(255, 77, 77, 0.15)"
+    line_color = "#059669" if is_positive else "#DC2626"  # Emerald Green vs Crimson Red
+    fill_color = "rgba(5, 150, 105, 0.12)" if is_positive else "rgba(220, 38, 38, 0.12)"
 
     fig = go.Figure()
 
@@ -50,7 +50,7 @@ def create_price_chart(history_data, dept_name="학과"):
         y=[max_row['price']],
         mode='markers+text',
         name='최고가',
-        marker=dict(color='#3B82F6', size=9, symbol='circle'),
+        marker=dict(color='#2563EB', size=9, symbol='circle'),
         text=[f"최고: {max_row['price']:,.0f}"],
         textposition="top center",
         hoverinfo='none'
@@ -61,33 +61,35 @@ def create_price_chart(history_data, dept_name="학과"):
         y=[min_row['price']],
         mode='markers+text',
         name='최저가',
-        marker=dict(color='#F59E0B', size=9, symbol='circle'),
+        marker=dict(color='#D97706', size=9, symbol='circle'),
         text=[f"최저: {min_row['price']:,.0f}"],
         textposition="bottom center",
         hoverinfo='none'
     ))
 
     fig.update_layout(
-        template="plotly_dark",
+        template="plotly_white",
         title=dict(
             text=f"<b>{dept_name} 주가 추이</b>",
-            font=dict(size=18, color="#FFFFFF")
+            font=dict(size=18, color="#1F2937")
         ),
         margin=dict(l=20, r=20, t=50, b=30),
-        paper_bgcolor="rgba(15, 23, 42, 0.6)",
-        plot_bgcolor="rgba(15, 23, 42, 0.6)",
+        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="#F9FAFB",
         xaxis=dict(
             showgrid=True,
-            gridcolor="rgba(255, 255, 255, 0.05)",
+            gridcolor="#E5E7EB",
             tickformat="%H:%M\n%m/%d",
-            showline=False
+            showline=False,
+            tickfont=dict(color="#6B7280")
         ),
         yaxis=dict(
             showgrid=True,
-            gridcolor="rgba(255, 255, 255, 0.05)",
+            gridcolor="#E5E7EB",
             showline=False,
             zeroline=False,
-            side="right"
+            side="right",
+            tickfont=dict(color="#6B7280")
         ),
         showlegend=False,
         hovermode="x unified",
@@ -98,15 +100,15 @@ def create_price_chart(history_data, dept_name="학과"):
 
 def create_portfolio_pie_chart(holdings, coin):
     """
-    Creates a modern Donut chart of user portfolio breakdown (Coin vs. Stock Holdings).
+    Creates a modern Donut chart of user portfolio breakdown (Bright theme).
     """
     labels = ["보유 코인 (Cash)"]
     values = [coin]
-    colors = ["#6366F1"]  # Indigo for Cash
+    colors = ["#00703E"]  # Konkuk Green for Cash
 
     dept_colors = [
-        "#10B981", "#3B82F6", "#F59E0B", "#EC4899", "#8B5CF6", 
-        "#06B6D4", "#F97316", "#14B8A6", "#64748B", "#A855F7"
+        "#059669", "#2563EB", "#D97706", "#DB2777", "#7C3AED", 
+        "#0891B2", "#EA580C", "#0D9488", "#475569", "#9333EA"
     ]
 
     for idx, h in enumerate(holdings):
@@ -118,13 +120,13 @@ def create_portfolio_pie_chart(holdings, coin):
         labels=labels,
         values=values,
         hole=0.55,
-        marker=dict(colors=colors, line=dict(color='#0F172A', width=2)),
+        marker=dict(colors=colors, line=dict(color='#FFFFFF', width=2)),
         textinfo='percent+label',
         hovertemplate="<b>%{label}</b><br>평가금액: %{value:,.1f} Coin (%{percent})<extra></extra>"
     )])
 
     fig.update_layout(
-        template="plotly_dark",
+        template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=10, r=10, t=20, b=20),
@@ -136,11 +138,11 @@ def create_portfolio_pie_chart(holdings, coin):
 
 def create_comparison_chart(dept_histories):
     """
-    Multi-line chart comparing price histories of multiple departments.
+    Multi-line chart comparing price histories of multiple departments (Bright theme).
     """
     fig = go.Figure()
     
-    colors = ["#3B82F6", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6", "#06B6D4"]
+    colors = ["#2563EB", "#059669", "#D97706", "#DB2777", "#7C3AED", "#0891B2"]
     
     for idx, (dept_name, history) in enumerate(dept_histories.items()):
         if not history:
@@ -158,12 +160,12 @@ def create_comparison_chart(dept_histories):
         ))
 
     fig.update_layout(
-        template="plotly_dark",
-        paper_bgcolor="rgba(15, 23, 42, 0.6)",
-        plot_bgcolor="rgba(15, 23, 42, 0.6)",
+        template="plotly_white",
+        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="#F9FAFB",
         margin=dict(l=20, r=20, t=30, b=30),
-        xaxis=dict(showgrid=True, gridcolor="rgba(255, 255, 255, 0.05)"),
-        yaxis=dict(showgrid=True, gridcolor="rgba(255, 255, 255, 0.05)", side="right"),
+        xaxis=dict(showgrid=True, gridcolor="#E5E7EB"),
+        yaxis=dict(showgrid=True, gridcolor="#E5E7EB", side="right"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         height=320
     )

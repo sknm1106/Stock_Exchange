@@ -8,11 +8,12 @@ if ROOT_DIR not in sys.path:
 import streamlit as st
 from database.seed import seed_db
 from scheduler.scheduler import start_scheduler
+from utils.checkin import process_checkin
 
 # Page Configuration
 st.set_page_config(
-    page_title="Engineering Stock Exchange | 공과대학 주식 거래소",
-    page_icon="🎓",
+    page_title="공과대학 전공박람회 주식 시장",
+    page_icon="🟢",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -26,8 +27,19 @@ def init_app():
 
 init_app()
 
+query_params = st.query_params
+qr_dept = query_params.get("dept") or query_params.get("department") or query_params.get("token")
+mode_staff = query_params.get("mode") == "staff"
+
 # Route logic
 if 'user' in st.session_state and st.session_state['user']:
+    user = st.session_state['user']
+    if qr_dept:
+        res = process_checkin(user['student_id'], qr_dept)
+        st.session_state['last_checkin_res'] = res
     st.switch_page("pages/2_Home.py")
 else:
-    st.switch_page("pages/1_Login.py")
+    if mode_staff:
+        st.switch_page("pages/1_Login.py")
+    else:
+        st.switch_page("pages/1_Login.py")

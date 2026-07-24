@@ -17,7 +17,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS users (
         student_id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        coin REAL NOT NULL DEFAULT 100.0,
+        coin REAL NOT NULL DEFAULT 0.0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -29,11 +29,34 @@ def init_db():
         name TEXT NOT NULL UNIQUE,
         code TEXT,
         description TEXT,
-        current_price REAL NOT NULL
+        current_price REAL NOT NULL,
+        qr_token TEXT UNIQUE
     )
     """)
     
-    # 3. holdings
+    # Check if qr_token column exists in existing database
+    cursor.execute("PRAGMA table_info(departments)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'qr_token' not in columns:
+        cursor.execute("ALTER TABLE departments ADD COLUMN qr_token TEXT")
+
+    # 3. department_checkins (12QR.md requirements)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS department_checkins (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id TEXT DEFAULT '2026_EXPO',
+        student_id TEXT NOT NULL,
+        department_id INTEGER NOT NULL,
+        reward_coin REAL DEFAULT 100.0,
+        checked_in_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        qr_token_id TEXT,
+        UNIQUE(event_id, student_id, department_id),
+        FOREIGN KEY (student_id) REFERENCES users(student_id),
+        FOREIGN KEY (department_id) REFERENCES departments(id)
+    )
+    """)
+
+    # 4. holdings
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS holdings (
         student_id TEXT NOT NULL,
@@ -46,7 +69,7 @@ def init_db():
     )
     """)
     
-    # 4. transactions
+    # 5. transactions
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +84,7 @@ def init_db():
     )
     """)
     
-    # 5. price_history
+    # 6. price_history
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS price_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,7 +95,7 @@ def init_db():
     )
     """)
     
-    # 6. price_schedule
+    # 7. price_schedule
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS price_schedule (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,7 +107,7 @@ def init_db():
     )
     """)
 
-    # 7. news
+    # 8. news
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS news (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

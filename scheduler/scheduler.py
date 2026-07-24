@@ -3,6 +3,7 @@ from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from utils.database import fetch_all, fetch_one, execute_query
 from database.db import get_db_connection
+from utils.date_utils import get_korea_now_str
 
 scheduler = None
 
@@ -18,7 +19,7 @@ def update_prices_now():
     departments = cursor.fetchall()
     
     updated_records = []
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = get_korea_now_str()
     
     for dept in departments:
         dept_id = dept['id']

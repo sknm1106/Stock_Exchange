@@ -1,5 +1,6 @@
 from utils.database import fetch_all, fetch_one, execute_query
 from utils.auth import get_user, update_user_coin
+from utils.date_utils import get_korea_now_str
 
 def get_departments_list():
     """
@@ -129,10 +130,11 @@ def buy_stock(student_id: str, department_id: int, quantity: int):
             (student_id, department_id, quantity, price)
         )
         
-    # Record transaction
+    # Record transaction with Korea Standard Time
+    now_str = get_korea_now_str()
     execute_query(
-        "INSERT INTO transactions (student_id, department_id, type, price, quantity) VALUES (?, ?, 'BUY', ?, ?)",
-        (student_id, department_id, price, quantity)
+        "INSERT INTO transactions (student_id, department_id, type, price, quantity, timestamp) VALUES (?, ?, 'BUY', ?, ?, ?)",
+        (student_id, department_id, price, quantity, now_str)
     )
     
     return True, f"🎉 {dept['name']} {quantity}주 매수 완료! ({total_cost:,.1f} Coin 소진)"
@@ -181,10 +183,11 @@ def sell_stock(student_id: str, department_id: int, quantity: int):
             (remaining_qty, student_id, department_id)
         )
         
-    # Record transaction
+    # Record transaction with Korea Standard Time
+    now_str = get_korea_now_str()
     execute_query(
-        "INSERT INTO transactions (student_id, department_id, type, price, quantity) VALUES (?, ?, 'SELL', ?, ?)",
-        (student_id, department_id, price, quantity)
+        "INSERT INTO transactions (student_id, department_id, type, price, quantity, timestamp) VALUES (?, ?, 'SELL', ?, ?, ?)",
+        (student_id, department_id, price, quantity, now_str)
     )
     
     return True, f"💰 {dept['name']} {quantity}주 매도 완료! ({total_income:,.1f} Coin 획득)"

@@ -1,11 +1,13 @@
 from utils.database import fetch_one, execute_query, fetch_all
+from utils.date_utils import get_korea_now_str
 
-INITIAL_COIN_REWARD = 100.0
+INITIAL_COIN_REWARD = 0.0  # 12QR.md: 최초 로그인 시 자동 100 Coin 지급 기능은 제거
 
 def login_user(student_id: str, name: str):
     """
     Log in user with student_id and name.
-    If student_id does not exist, create user with initial 100 Coin bonus.
+    If student_id does not exist, create user with initial 0.0 Coin.
+    Coins are earned via scanning department QRs.
     Returns: (user_data_dict, is_new_user)
     """
     student_id = str(student_id).strip()
@@ -17,10 +19,10 @@ def login_user(student_id: str, name: str):
     user = fetch_one("SELECT * FROM users WHERE student_id = ?", (student_id,))
     
     if user is None:
-        # First time login -> Give 100 Coin
+        now_str = get_korea_now_str()
         execute_query(
-            "INSERT INTO users (student_id, name, coin) VALUES (?, ?, ?)",
-            (student_id, name, INITIAL_COIN_REWARD)
+            "INSERT INTO users (student_id, name, coin, created_at) VALUES (?, ?, ?, ?)",
+            (student_id, name, INITIAL_COIN_REWARD, now_str)
         )
         new_user = fetch_one("SELECT * FROM users WHERE student_id = ?", (student_id,))
         return dict(new_user), True
@@ -41,3 +43,4 @@ def update_user_coin(student_id: str, coin: float):
 def get_all_users():
     users = fetch_all("SELECT * FROM users ORDER BY created_at DESC")
     return [dict(u) for u in users]
+
