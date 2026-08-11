@@ -19,7 +19,7 @@ from utils.auth import get_user
 from utils.database import fetch_all
 
 st.set_page_config(
-    page_title="학과 상세 | 공과대학 전공박람회 주식 시장",
+    page_title="KUSPI | 학과 상세",
     page_icon="🟢",
     layout="wide"
 )

@@ -10,22 +10,22 @@ import pandas as pd
 import urllib.parse
 from utils.ui import apply_custom_theme
 from utils.database import fetch_all, fetch_one, execute_query
-from utils.trade import get_departments_list, get_all_transactions
+from utils.trade import get_departments_list, get_all_transactions, get_user_portfolio_summary
 from utils.auth import get_all_users, update_user_coin, get_user
-from utils.checkin import get_all_checkin_logs
+from utils.checkin import get_all_checkin_logs, ALL_QR_EVENTS
 from scheduler.scheduler import update_prices_now
 from database.seed import seed_db
 from utils.date_utils import get_korea_now_str
 
 st.set_page_config(
-    page_title="관리자 대시보드 | 공과대학 전공박람회 주식 시장",
+    page_title="KUSPI | 관리자",
     page_icon="⚙️",
     layout="wide"
 )
 
 apply_custom_theme()
 
-# Strict Admin Authorization Check (fix.md requirement 5)
+# Strict Admin Authorization Check
 if not st.session_state.get("is_admin", False):
     st.error("🔒 관리자만 접근할 수 있는 페이지입니다.")
     st.info("로그인 화면에서 학번: `admin777`, 이름: `admin777` 로 로그인 후 이용해주세요.")
@@ -39,8 +39,8 @@ if not st.session_state.get("is_admin", False):
 st.markdown("""
 <div style="background: #FFFFFF; border: 1.5px solid #00703E; padding: 16px 24px; border-radius: 14px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0, 112, 62, 0.08);">
     <div>
-        <h2 style="margin:0; font-weight: 800; color: #00703E;">⚙️ 관리자 대시보드 (Admin Center)</h2>
-        <div style="color: #4B5563; font-size: 0.9rem; margin-top: 2px;">건국대학교 공과대학 전공박람회 운영진 및 교수진 전용 시스템</div>
+        <h2 style="margin:0; font-weight: 800; color: #00703E;">⚙️ KUSPI 관리자 대시보드 (Admin Center)</h2>
+        <div style="color: #4B5563; font-size: 0.9rem; margin-top: 2px;">건국대학교 공과대학 학과 모의 주식 거래소 (KUSPI) 운영진 전용 시스템</div>
     </div>
     <div>
         <span style="background: #00703E; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;">
@@ -50,7 +50,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Admin Tabs (12QR.md Requirement 8: 9 Tabs Structure)
+# Admin Tabs Structure
 (
     tab_overview, 
     tab_users, 
@@ -63,14 +63,14 @@ st.markdown("""
     tab_system
 ) = st.tabs([
     "1. 📊 행사 현황",
-    "2. 👥 학생 조회",
+    "2. 👥 학생 조회 (총자산 순위)",
     "3. 🎓 교수 보상",
-    "4. 🏬 학과별 참여 현황",
+    "4. 🏬 QR별 참여 현황",
     "5. 🪙 코인 지급 내역",
     "6. 📜 거래내역",
     "7. 💹 가격 관리",
-    "8. 📱 QR 관리",
-    "9. ⚙️ 관리자 계정 & 시스템"
+    "8. 📱 QR 관리 (14개)",
+    "9. ⚙️ 시스템"
 ])
 
 # Fetch foundational data
@@ -83,7 +83,7 @@ depts = get_departments_list()
 # Tab 1: 행사 현황 Overview
 # ---------------------------------------------------------
 with tab_overview:
-    st.markdown("<h4 style='color:#00703E;'>📊 전공박람회 행사이벤트 실시간 종합 현황</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color:#00703E;'>📊 KUSPI 행사이벤트 실시간 종합 현황</h4>", unsafe_allow_html=True)
     
     total_students = len([u for u in all_users if u['student_id'] != 'admin777'])
     total_checkins = len(checkin_logs)
@@ -103,9 +103,9 @@ with tab_overview:
     with c_o2:
         st.markdown(f"""
         <div class="glass-card">
-            <div style="font-size: 0.8rem; color: #6B7280;">학과 부스 QR 총 스캔 건수</div>
+            <div style="font-size: 0.8rem; color: #6B7280;">QR 총 스캔 건수</div>
             <div style="font-size: 1.8rem; font-weight: 800; color: #2563EB;">{total_checkins} 건</div>
-            <div style="font-size: 0.75rem; color: #6B7280;">12개 학과 합산</div>
+            <div style="font-size: 0.75rem; color: #6B7280;">9개 학과 + 5개 공통행사 합산</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -114,7 +114,7 @@ with tab_overview:
         <div class="glass-card">
             <div style="font-size: 0.8rem; color: #6B7280;">누적 지급 코인 수량</div>
             <div style="font-size: 1.8rem; font-weight: 800; color: #059669;">🪙 {total_granted_coins:,.0f} Coin</div>
-            <div style="font-size: 0.75rem; color: #6B7280;">부스 보상 총액</div>
+            <div style="font-size: 0.75rem; color: #6B7280;">이벤트 보상 총액</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -128,22 +128,44 @@ with tab_overview:
         """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Tab 2: 학생 조회
+# Tab 2: 학생 조회 (총 자산 순위 기준)
 # ---------------------------------------------------------
 with tab_users:
-    st.markdown("<h4 style='color:#00703E;'>👥 전체 학생 조회 및 코인 잔액 검색</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color:#00703E;'>👥 전체 학생 조회 및 총 자산 순위 (보유 코인 + 주식 평가액)</h4>", unsafe_allow_html=True)
+    st.info("🏆 우승 상품 지급 기준: 단순히 코인 잔액이 아닌 **총 보유 자산(보유 코인 + 주식 평가액)**을 기준으로 정렬됩니다.")
     
-    search_query = st.text_input("🔍 학생 검색 (학번 또는 이름)", placeholder="학번 또는 이름 입력...")
+    search_query = st.text_input("🔍 학생 검색 (학번 또는 이름)", placeholder="학번 또는 이름 입력...", key="search_user_admin")
     
-    df_u = pd.DataFrame(all_users)
-    if not df_u.empty:
-        df_u = df_u[df_u['student_id'] != 'admin777']
+    user_asset_list = []
+    for u in all_users:
+        if u['student_id'] == 'admin777':
+            continue
+        sid = u['student_id']
+        name = u['name']
+        summary = get_user_portfolio_summary(sid)
+        coin = summary['coin']
+        stock_eval = summary['stock_eval']
+        total_asset = summary['total_asset']
+        user_asset_list.append({
+            'student_id': sid,
+            'name': name,
+            'coin': coin,
+            'stock_eval': stock_eval,
+            'total_asset': total_asset,
+            'created_at': u['created_at']
+        })
+
+    if user_asset_list:
+        df_u = pd.DataFrame(user_asset_list)
+        df_u = df_u.sort_values(by='total_asset', ascending=False)
+        df_u['rank'] = range(1, len(df_u) + 1)
+
         if search_query.strip():
             sq = search_query.strip().lower()
             df_u = df_u[df_u['student_id'].astype(str).str.contains(sq) | df_u['name'].str.lower().str.contains(sq)]
-            
-        df_u = df_u[['student_id', 'name', 'coin', 'created_at']]
-        df_u.columns = ['학번', '이름', '보유 코인 (Coin)', '가입 / 첫 접속일']
+
+        df_u = df_u[['rank', 'student_id', 'name', 'coin', 'stock_eval', 'total_asset', 'created_at']]
+        df_u.columns = ['순위', '학번', '이름', '보유 코인 (Coin)', '주식 평가액 (Coin)', '총 보유 자산 (Coin)', '첫 접속일']
         st.dataframe(df_u, use_container_width=True, hide_index=True)
     else:
         st.info("등록된 학생이 없습니다.")
@@ -179,52 +201,60 @@ with tab_professor:
                     st.error("해당 학번의 학생을 찾을 수 없습니다.")
 
 # ---------------------------------------------------------
-# Tab 4: 학과별 참여 현황
+# Tab 4: QR별 참여 현황 (14개 QR)
 # ---------------------------------------------------------
 with tab_dept_stats:
-    st.markdown("<h4 style='color:#00703E;'>🏬 12개 학과별 부스 이벤트 참여 통계</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color:#00703E;'>🏬 14개 QR 이벤트별 참여 통계 (9개 학과 부스 + 5개 공통 행사)</h4>", unsafe_allow_html=True)
     
-    dept_checkin_counts = fetch_all("""
-        SELECT d.id, d.name, d.code, COUNT(c.id) as checkin_count
-        FROM departments d
-        LEFT JOIN department_checkins c ON d.id = c.department_id
-        GROUP BY d.id
-        ORDER BY d.id ASC
+    qr_counts = fetch_all("""
+        SELECT qr_event_id, event_name, COUNT(id) as scan_count
+        FROM qr_checkins
+        GROUP BY qr_event_id, event_name
     """)
     
-    df_dcs = pd.DataFrame(dept_checkin_counts)
-    if not df_dcs.empty:
-        df_dcs.columns = ['학과 ID', '학과명', '학과 코드', '부스 참여자 수']
+    count_dict = {r['qr_event_id']: r['scan_count'] for r in qr_counts}
+    
+    stat_rows = []
+    for qkey, qinfo in ALL_QR_EVENTS.items():
+        stat_rows.append({
+            "QR 이벤트 ID": qkey,
+            "이벤트명": qinfo['name'],
+            "구분": qinfo['category'],
+            "스캔 참여자 수": count_dict.get(qkey, 0)
+        })
         
-        col_chart_dept, col_table_dept = st.columns([3, 2])
-        with col_table_dept:
-            st.dataframe(df_dcs, use_container_width=True, hide_index=True)
-        with col_chart_dept:
-            import plotly.express as px
-            fig_bar = px.bar(
-                df_dcs, 
-                x='학과명', 
-                y='부스 참여자 수',
-                title="<b>학과별 부스 QR 스캔 인원</b>",
-                color='부스 참여자 수',
-                color_continuous_scale='Greens'
-            )
-            fig_bar.update_layout(template="plotly_white", paper_bgcolor="#FFFFFF", plot_bgcolor="#F9FAFB")
-            st.plotly_chart(fig_bar, use_container_width=True)
+    df_dcs = pd.DataFrame(stat_rows)
+    df_dcs = df_dcs.sort_values(by='스캔 참여자 수', ascending=False)
+    
+    col_chart_dept, col_table_dept = st.columns([3, 2])
+    with col_table_dept:
+        st.dataframe(df_dcs, use_container_width=True, hide_index=True)
+    with col_chart_dept:
+        import plotly.express as px
+        fig_bar = px.bar(
+            df_dcs, 
+            x='이벤트명', 
+            y='스캔 참여자 수',
+            title="<b>14개 QR별 참여자 수</b>",
+            color='스캔 참여자 수',
+            color_continuous_scale='Greens'
+        )
+        fig_bar.update_layout(template="plotly_white", paper_bgcolor="#FFFFFF", plot_bgcolor="#F9FAFB")
+        st.plotly_chart(fig_bar, use_container_width=True)
 
 # ---------------------------------------------------------
 # Tab 5: 코인 지급 내역
 # ---------------------------------------------------------
 with tab_coin_logs:
-    st.markdown("<h4 style='color:#00703E;'>🪙 학과 부스 QR 코인 지급 내역 Log</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color:#00703E;'>🪙 14개 QR 코인 지급 내역 Log</h4>", unsafe_allow_html=True)
     
     if checkin_logs:
         df_cl = pd.DataFrame(checkin_logs)
-        df_cl = df_cl[['checked_in_at', 'student_id', 'user_name', 'dept_name', 'reward_coin']]
-        df_cl.columns = ['참여 시간 (한국시간)', '학번', '학생 이름', '참여 학과명', '지급 코인 (Coin)']
+        df_cl = df_cl[['checked_in_at', 'student_id', 'user_name', 'event_name', 'reward_coin']]
+        df_cl.columns = ['참여 시간 (한국시간)', '학번', '학생 이름', 'QR 이벤트명', '지급 코인 (Coin)']
         st.dataframe(df_cl, use_container_width=True, hide_index=True)
     else:
-        st.caption("아직 기록된 부스 QR 스캔 코인 지급 내역이 없습니다.")
+        st.caption("아직 기록된 QR 스캔 코인 지급 내역이 없습니다.")
 
 # ---------------------------------------------------------
 # Tab 6: 전체 거래내역
@@ -275,10 +305,10 @@ with tab_price:
 
     with col_p2:
         st.markdown("##### 2. ⏰ 1시간 변동 즉시 수동 실행")
-        st.info("버튼을 누르면 12개 학과의 시세 변동 스케줄러가 즉시 동작하여 다음 예상 주가가 계산되어 반영됩니다.")
+        st.info(f"버튼을 누르면 {len(depts)}개 학과의 시세 변동 스케줄러가 즉시 동작하여 다음 예상 주가가 계산되어 반영됩니다.")
         if st.button("⚡ 즉시 1시간 가격 변동 실행", key="btn_force_scheduler", type="primary", use_container_width=True):
             updated = update_prices_now()
-            st.success("🎉 12개 학과 주가가 성공적으로 업데이트되었습니다!")
+            st.success(f"🎉 {len(depts)}개 학과 주가가 성공적으로 업데이트되었습니다!")
             st.rerun()
 
     st.markdown("<hr style='border:0; height:1px; background:#E5E7EB; margin: 20px 0;'>", unsafe_allow_html=True)
@@ -305,50 +335,47 @@ with tab_price:
             st.error(f"CSV 업로드 실패: {e}")
 
 # ---------------------------------------------------------
-# Tab 8: QR 관리
+# Tab 8: QR 관리 (총 14개 QR)
 # ---------------------------------------------------------
 with tab_qr:
-    st.markdown("<h4 style='color:#00703E;'>📱 12개 학과 부스 QR코드 & 관리자 전용 접속 정보</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color:#00703E;'>📱 14개 QR 코드 (9개 학과 부스 + 5개 공통 행사) & 접속 정보</h4>", unsafe_allow_html=True)
     
     st.markdown("""
     <div style="background: #F7F9F8; border: 1px solid #E5E7EB; padding: 14px; border-radius: 10px; margin-bottom: 20px;">
-        <b>🔑 관리자 접속 주소:</b> <code>https://서비스주소/?mode=staff</code><br>
+        <b>🔑 관리자 접속 주소:</b> <code>https://stockexchange-lwgrxbag7yjrayj8w8pwqj.streamlit.app/?mode=staff</code><br>
         <span style="font-size:0.85rem; color:#6B7280;">관리자 페이지는 일반 사이드바에 노출되지 않으며 학번 <code>admin777</code> / 이름 <code>admin777</code> 인증이 필요합니다.</span>
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("##### 📍 학과별 학생 참여 QR 접속 URL (총 12개)")
+    st.markdown("##### 📍 전체 14개 QR 이벤트 목록 및 접속 URL")
     
     qr_data_list = []
-    for d in depts:
-        dept_info = fetch_one("SELECT qr_token FROM departments WHERE id = ?", (d['id'],))
-        token = dept_info['qr_token'] if dept_info else f"dept_{d['id']}_token"
-        target_url = f"https://서비스주소/?dept={d['code'].lower()}&token={token}"
+    for qkey, qinfo in ALL_QR_EVENTS.items():
+        target_url = f"https://stockexchange-lwgrxbag7yjrayj8w8pwqj.streamlit.app/?qr={qkey}"
         qr_data_list.append({
-            "ID": d['id'],
-            "학과명": d['name'],
-            "학과 코드": d['code'],
-            "고유 QR 토큰": token,
+            "QR 이벤트 ID": qkey,
+            "구분": qinfo['category'],
+            "이벤트 / 학과명": qinfo['name'],
             "접속 URL": target_url
         })
         
     df_qr = pd.DataFrame(qr_data_list)
     st.dataframe(df_qr, use_container_width=True, hide_index=True)
     
-    st.markdown("##### 📌 QR 이미지 생성기 링크 예시")
-    sel_qr_dept = st.selectbox("QR코드 미리보기할 학과 선택", [d['name'] for d in depts])
-    sel_dept_row = next(d for d in qr_data_list if d['학과명'] == sel_qr_dept)
+    st.markdown("##### 📌 QR 이미지 생성기 미리보기")
+    sel_qr_name = st.selectbox("미리볼 QR 코드 선택", [d['이벤트 / 학과명'] for d in qr_data_list], key="admin_qr_select")
+    sel_qr_row = next(d for d in qr_data_list if d['이벤트 / 학과명'] == sel_qr_name)
     
-    qr_img_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(sel_dept_row['접속 URL'])}"
+    qr_img_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(sel_qr_row['접속 URL'])}"
     
     col_qr_img, col_qr_txt = st.columns([1, 3])
     with col_qr_img:
-        st.image(qr_img_api_url, caption=f"{sel_dept_row['학과명']} QR", width=180)
+        st.image(qr_img_api_url, caption=f"{sel_qr_row['이벤트 / 학과명']} QR", width=180)
     with col_qr_txt:
-        st.markdown(f"**학과:** {sel_dept_row['학과명']} (`{sel_dept_row['학과 코드']}`)")
-        st.markdown(f"**QR 토큰:** `{sel_dept_row['고유 QR 토큰']}`")
-        st.markdown(f"**연결 URL:** `{sel_dept_row['접속 URL']}`")
-        st.caption("위 QR 코드를 부스에 부착하면 학생들이 스캔하여 100 Coin 보상을 수령할 수 있습니다.")
+        st.markdown(f"**이벤트 / 학과명:** {sel_qr_row['이벤트 / 학과명']} (`{sel_qr_row['구분']}`)")
+        st.markdown(f"**QR 이벤트 ID:** `{sel_qr_row['QR 이벤트 ID']}`")
+        st.markdown(f"**연결 URL:** `{sel_qr_row['접속 URL']}`")
+        st.caption("위 QR 코드를 현장에 부착하면 학생들이 스캔하여 100 Coin 보상을 1회 수령할 수 있습니다.")
 
 # ---------------------------------------------------------
 # Tab 9: 관리자 계정 & 시스템
@@ -362,7 +389,7 @@ with tab_system:
         dept_news_opts.update({d['name']: d['id'] for d in depts})
         
         sel_news_dept = st.selectbox("관련 학과", list(dept_news_opts.keys()))
-        news_title = st.text_input("뉴스 제목", placeholder="예: 컴퓨터공학과 AI 연구실 대형 연구과제 수주!")
+        news_title = st.text_input("뉴스 제목", placeholder="예: 컴퓨터공학부 AI 연구실 대형 연구과제 수주!")
         news_content = st.text_area("뉴스 상세 내용", placeholder="자세한 호재/악재 내용을 입력하세요.")
         news_impact = st.selectbox("시장 영향", ["BULLISH (호재/상승)", "BEARISH (악재/하락)", "NEUTRAL (일반)"])
         
@@ -393,7 +420,7 @@ with tab_system:
             from database.db import get_db_connection
             conn = get_db_connection()
             cur = conn.cursor()
-            tables = ['users', 'departments', 'department_checkins', 'holdings', 'transactions', 'price_history', 'price_schedule', 'news']
+            tables = ['users', 'departments', 'department_checkins', 'qr_checkins', 'holdings', 'transactions', 'price_history', 'price_schedule', 'news']
             for t in tables:
                 cur.execute(f"DROP TABLE IF EXISTS {t}")
             conn.commit()

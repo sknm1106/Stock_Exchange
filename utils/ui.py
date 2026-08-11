@@ -221,9 +221,10 @@ def render_header():
                 padding: 0;
                 font-weight: 800;
                 color: #00703E;
-                font-size: 1.5rem;
+                font-size: 1.6rem;
+                letter-spacing: -0.5px;
             ">
-                공과대학 전공박람회 주식 시장
+                KUSPI
             </h2>
 
             <div style="
@@ -238,15 +239,12 @@ def render_header():
     with col_user:
         if user:
             summary = get_user_portfolio_summary(user['student_id'])
-            checkin_info = get_user_checkin_status(user['student_id'])
-            completed_depts = checkin_info['completed_count']
             
             c1, c2, c3, c4 = st.columns([1.2, 1.3, 1.3, 0.8])
             with c1:
                 st.markdown(f"""
                 <div style="text-align: right;">
-                    <div style="font-size: 0.75rem; color: #6B7280;">참여 학과: <b>{completed_depts} / 12</b></div>
-                    <div style="font-weight: 700; color: #1F2937;">👤 {user['name']} <span style="font-size:0.75rem; color:#6B7280;">({user['student_id']})</span></div>
+                    <div style="font-weight: 700; color: #1F2937; margin-top: 4px;">👤 {user['name']} <span style="font-size:0.75rem; color:#6B7280;">({user['student_id']})</span></div>
                 </div>
                 """, unsafe_allow_html=True)
             with c2:

@@ -12,7 +12,7 @@ from utils.trade import get_user_holdings, get_user_portfolio_summary, get_user_
 from utils.graph import create_portfolio_pie_chart
 
 st.set_page_config(
-    page_title="포트폴리오 | 공과대학 전공박람회 주식 시장",
+    page_title="KUSPI | 포트폴리오",
     page_icon="🟢",
     layout="wide"
 )
@@ -108,7 +108,6 @@ with col_holdings:
                 st.markdown(f"""
                 <div style="padding: 4px 0;">
                     <div style="font-weight: 700; color: #1F2937;">{h['dept_name']}</div>
-                    <div style="font-size: 0.75rem; color: #6B7280;">{h['dept_code']}</div>
                 </div>
                 """, unsafe_allow_html=True)
                 

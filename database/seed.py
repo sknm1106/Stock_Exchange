@@ -18,11 +18,16 @@ def seed_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. Seed departments if empty
+    # 1. Seed departments if count != 9
     cursor.execute("SELECT COUNT(*) FROM departments")
     dept_count = cursor.fetchone()[0]
     
-    if dept_count == 0 and os.path.exists(DEPTS_CSV):
+    if dept_count != 9 and os.path.exists(DEPTS_CSV):
+        cursor.execute("DELETE FROM departments")
+        cursor.execute("DELETE FROM price_history")
+        cursor.execute("DELETE FROM news")
+        conn.commit()
+        
         df_depts = pd.read_csv(DEPTS_CSV)
         for _, row in df_depts.iterrows():
             dept_id = int(row['id'])
@@ -33,7 +38,7 @@ def seed_db():
                 (dept_id, row['name'], row['code'], row['description'], float(row['base_price']), qr_token)
             )
         conn.commit()
-        print("✅ Departments seeded successfully with QR tokens.")
+        print("✅ 9 Departments seeded successfully with QR tokens.")
     else:
         # Ensure qr_tokens exist for departments if missing
         cursor.execute("SELECT id, code, qr_token FROM departments")
@@ -61,19 +66,18 @@ def seed_db():
                 (float(row['price']), int(row['department_id']))
             )
         conn.commit()
-        print("✅ Price history seeded successfully.")
+        print("✅ Price history seeded successfully for 2026-08-13.")
     
     # 3. Seed news if empty
     cursor.execute("SELECT COUNT(*) FROM news")
     news_count = cursor.fetchone()[0]
     if news_count == 0:
-        now_time = get_korea_now_str()
         sample_news = [
-            (1, "🚀 컴퓨터공학과, 생성형 AI 해커톤 전국 1위 달성!", "학생들이 자체 개발한 LLM 모델이 최고상을 받으며 주가가 급등세를 타고 있습니다.", "BULLISH", now_time),
-            (2, "⚡ 전자공학과, 차세대 3nm 반도체 신기술 발표", "반도체 연구실의 새로운 논문이 IEEE 저널에 수재되며 투자자들의 기대감이 고조되었습니다.", "BULLISH", now_time),
-            (3, "🤖 기계공학과, 자율주행 모빌리티 경진대회 우승", "스마트 로보틱스 자율주행 차량이 만점을 기록하며 호재로 작용하고 있습니다.", "BULLISH", now_time),
-            (10, "🛰️ 항공우주공학과, 초소형 위성 궤도 진입 성공", "자체 제작 위성이 성공적으로 통신에 성공하며 학과 가치가 급격히 올랐습니다.", "BULLISH", now_time),
-            (4, "🧪 화학공학과, 차세대 2차전지 전고체 배터리 핵심 원천기술 확보", "친환경 에너지를 이끌 핵심 기술 발표로 기대감이 증폭되었습니다.", "BULLISH", now_time)
+            (5, "🚀 컴퓨터공학부, 생성형 AI 해커톤 전국 1위 달성!", "학생들이 자체 개발한 LLM 모델이 최고상을 받으며 주가가 급등세를 타고 있습니다.", "BULLISH", "2026-08-13 09:30:00"),
+            (3, "⚡ 전기전자공학부, 차세대 3nm 반도체 신기술 발표", "반도체 연구실의 새로운 논문이 IEEE 저널에 수재되며 투자자들의 기대감이 고조되었습니다.", "BULLISH", "2026-08-13 10:15:00"),
+            (2, "🤖 기계·로봇·자동차공학부, 자율주행 모빌리티 경진대회 우승", "스마트 로보틱스 자율주행 차량이 만점을 기록하며 호재로 작용하고 있습니다.", "BULLISH", "2026-08-13 11:00:00"),
+            (7, "🛰️ 항공우주·모빌리티공학과, 초소형 위성 궤도 진입 성공", "자체 제작 위성이 성공적으로 통신에 성공하며 학과 가치가 급격히 올랐습니다.", "BULLISH", "2026-08-13 11:45:00"),
+            (4, "🧪 화공·생명·에너지공학부, 차세대 2차전지 전고체 배터리 핵심 원천기술 확보", "친환경 에너지를 이끌 핵심 기술 발표로 기대감이 증폭되었습니다.", "BULLISH", "2026-08-13 12:30:00")
         ]
         for dept_id, title, content, impact, ts in sample_news:
             cursor.execute(

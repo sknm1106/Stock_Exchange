@@ -40,7 +40,7 @@ def init_db():
     if 'qr_token' not in columns:
         cursor.execute("ALTER TABLE departments ADD COLUMN qr_token TEXT")
 
-    # 3. department_checkins (12QR.md requirements)
+    # 3. department_checkins & qr_checkins (14 QR support)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS department_checkins (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +53,19 @@ def init_db():
         UNIQUE(event_id, student_id, department_id),
         FOREIGN KEY (student_id) REFERENCES users(student_id),
         FOREIGN KEY (department_id) REFERENCES departments(id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS qr_checkins (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT NOT NULL,
+        qr_event_id TEXT NOT NULL,
+        event_name TEXT NOT NULL,
+        reward_coin REAL DEFAULT 100.0,
+        checked_in_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(student_id, qr_event_id),
+        FOREIGN KEY (student_id) REFERENCES users(student_id)
     )
     """)
 

@@ -12,7 +12,7 @@ from utils.checkin import process_checkin
 
 # Page Configuration
 st.set_page_config(
-    page_title="공과대학 전공박람회 주식 시장",
+    page_title="KUSPI",
     page_icon="🟢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -28,14 +28,14 @@ def init_app():
 init_app()
 
 query_params = st.query_params
-qr_dept = query_params.get("dept") or query_params.get("department") or query_params.get("token")
+qr_param = query_params.get("qr") or query_params.get("dept") or query_params.get("department") or query_params.get("token")
 mode_staff = query_params.get("mode") == "staff"
 
 # Route logic
 if 'user' in st.session_state and st.session_state['user']:
     user = st.session_state['user']
-    if qr_dept:
-        res = process_checkin(user['student_id'], qr_dept)
+    if qr_param:
+        res = process_checkin(user['student_id'], qr_param)
         st.session_state['last_checkin_res'] = res
     st.switch_page("pages/2_Home.py")
 else:

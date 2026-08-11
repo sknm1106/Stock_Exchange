@@ -19,7 +19,7 @@ if ROOT_DIR not in sys.path:
 
 from utils.auth import login_user
 from utils.ui import apply_custom_theme
-from utils.checkin import process_checkin
+from utils.checkin import process_checkin, resolve_qr_event
 from utils.database import fetch_one
 
 
@@ -27,7 +27,7 @@ from utils.database import fetch_one
 # 페이지 기본 설정
 # =========================================================
 st.set_page_config(
-    page_title="로그인 | 공과대학 전공박람회 주식 시장",
+    page_title="KUSPI | 로그인",
     page_icon="🟢",
     layout="wide"
 )
@@ -50,8 +50,9 @@ LOGO_PATH = (
 # =========================================================
 query_params = st.query_params
 
-qr_dept = (
-    query_params.get("dept")
+qr_param = (
+    query_params.get("qr")
+    or query_params.get("dept")
     or query_params.get("department")
     or query_params.get("token")
 )
@@ -106,19 +107,19 @@ with col2:
 
     # -----------------------------------------------------
     # 서비스 제목
-    # HTML을 분리해 태그가 문자로 출력되는 문제 방지
     # -----------------------------------------------------
     st.markdown(
         """
         <h1 style="
             text-align: center;
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             font-weight: 800;
             color: #00703E;
             margin-top: 8px;
             margin-bottom: 6px;
+            letter-spacing: -0.5px;
         ">
-            공과대학 전공박람회 주식 시장
+            KUSPI
         </h1>
         """,
         unsafe_allow_html=True
@@ -141,39 +142,15 @@ with col2:
     )
 
     # =====================================================
-    # 학과 QR 정보 조회
+    # QR 정보 조회 (14개 QR 지원)
     # =====================================================
-    target_dept_info = None
-
-    if qr_dept:
-        qr_dept = str(qr_dept).strip()
-
-        if qr_dept.isdigit():
-            target_dept_info = fetch_one(
-                """
-                SELECT *
-                FROM departments
-                WHERE id = ?
-                """,
-                (int(qr_dept),)
-            )
-        else:
-            target_dept_info = fetch_one(
-                """
-                SELECT *
-                FROM departments
-                WHERE code = ?
-                   OR name = ?
-                   OR qr_token = ?
-                """,
-                (qr_dept, qr_dept, qr_dept)
-            )
+    target_qr_key, target_qr_info = resolve_qr_event(qr_param) if qr_param else (None, None)
 
     # -----------------------------------------------------
-    # 학과별 QR 접속 안내
+    # QR 접속 안내
     # -----------------------------------------------------
-    if target_dept_info:
-        department_name = target_dept_info["name"]
+    if target_qr_info:
+        event_name = target_qr_info["name"]
 
         st.markdown(
             f"""
@@ -190,7 +167,7 @@ with col2:
                     font-weight: 700;
                     color: #00703E;
                 ">
-                    📍 [{department_name}] 부스 QR 스캔 완료!
+                    📍 [{event_name}] QR 스캔 완료!
                 </span>
 
                 <div style="
@@ -198,17 +175,17 @@ with col2:
                     color: #4B5563;
                     margin-top: 4px;
                 ">
-                    로그인하면 {department_name} 이벤트 참여 보상
-                    <b>100 Coin</b>이 지급됩니다.
+                    로그인하면 <b>{event_name}</b> 이벤트 참여 보상
+                    <b>100 Coin</b>이 자동 지급됩니다.
                 </div>
             </div>
             """,
             unsafe_allow_html=True
         )
 
-    elif qr_dept:
+    elif qr_param:
         st.warning(
-            "유효하지 않은 학과 QR코드입니다. "
+            "유효하지 않은 QR코드입니다. "
             "QR코드 주소를 다시 확인해주세요."
         )
 
@@ -219,93 +196,38 @@ with col2:
         )
 
     # =====================================================
-    # 상품 안내
+    # 상품 안내 (에어팟 4 ANC 모델 1개만 표시)
     # =====================================================
     st.markdown(
         """<div style="
             background: #FFFFFF;
             border: 1px solid #E5E7EB;
             border-radius: 16px;
-            padding: 22px;
+            padding: 20px;
             margin-bottom: 24px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            text-align: center;
         ">
             <div style="
-                font-size: 1.15rem;
+                font-size: 1.1rem;
                 font-weight: 800;
                 color: #00703E;
-                text-align: center;
-                margin-bottom: 16px;
-            ">상품 안내</div>
+                margin-bottom: 12px;
+            ">🥇 상품 안내</div>
             <div style="
-                display: flex;
-                justify-content: space-around;
-                gap: 12px;
-                text-align: center;
+                background: #F7F9F8;
+                padding: 16px 24px;
+                border-radius: 14px;
+                border: 1px solid #E5E7EB;
+                display: inline-block;
+                min-width: 240px;
             ">
+                <div style="font-size: 2.2rem; margin-bottom: 4px;">🎁</div>
                 <div style="
-                    flex: 1;
-                    background: #F7F9F8;
-                    padding: 12px;
-                    border-radius: 12px;
-                    border: 1px solid #E5E7EB;
-                ">
-                    <div style="font-size: 1.4rem;">🥇</div>
-                    <div style="
-                        font-weight: 700;
-                        font-size: 0.95rem;
-                        color: #00703E;
-                        margin-top: 4px;
-                    ">1등 상품</div>
-                    <div style="
-                        font-size: 0.85rem;
-                        font-weight: 600;
-                        color: #1F2937;
-                        margin-top: 2px;
-                    ">에어팟</div>
-                </div>
-                <div style="
-                    flex: 1;
-                    background: #F7F9F8;
-                    padding: 12px;
-                    border-radius: 12px;
-                    border: 1px solid #E5E7EB;
-                ">
-                    <div style="font-size: 1.4rem;">🥈</div>
-                    <div style="
-                        font-weight: 700;
-                        font-size: 0.95rem;
-                        color: #00703E;
-                        margin-top: 4px;
-                    ">2등 상품</div>
-                    <div style="
-                        font-size: 0.85rem;
-                        font-weight: 600;
-                        color: #1F2937;
-                        margin-top: 2px;
-                    ">스마트 워치</div>
-                </div>
-                <div style="
-                    flex: 1;
-                    background: #F7F9F8;
-                    padding: 12px;
-                    border-radius: 12px;
-                    border: 1px solid #E5E7EB;
-                ">
-                    <div style="font-size: 1.4rem;">🥉</div>
-                    <div style="
-                        font-weight: 700;
-                        font-size: 0.95rem;
-                        color: #00703E;
-                        margin-top: 4px;
-                    ">3등 상품</div>
-                    <div style="
-                        font-size: 0.85rem;
-                        font-weight: 600;
-                        color: #1F2937;
-                        margin-top: 2px;
-                    ">스타벅스 2만원 상품권</div>
-                </div>
+                    font-size: 1.15rem;
+                    font-weight: 800;
+                    color: #1F2937;
+                ">에어팟 4 ANC 모델</div>
             </div>
         </div>""",
         unsafe_allow_html=True
@@ -423,18 +345,18 @@ with col2:
                         st.session_state["user"] = user_data
                         st.session_state["is_admin"] = False
 
-                        # 학과 QR로 접속한 경우 참여 보상 처리
-                        if target_dept_info:
+                        # QR로 접속한 경우 참여 보상 처리
+                        if target_qr_key:
                             checkin_result = process_checkin(
                                 sid,
-                                target_dept_info["id"]
+                                target_qr_key
                             )
 
                             st.session_state["last_checkin_res"] = checkin_result
-                            st.session_state["selected_dept_id"] = target_dept_info["id"]
-                            st.session_state["qr_target_dept_id"] = target_dept_info["id"]
-                            st.switch_page("pages/3_Department.py")
-                            st.stop()
+                            if target_qr_info and target_qr_info.get("dept_id"):
+                                st.session_state["selected_dept_id"] = target_qr_info["dept_id"]
+                                st.switch_page("pages/3_Department.py")
+                                st.stop()
 
                         st.switch_page("pages/2_Home.py")
 
@@ -449,8 +371,7 @@ with col2:
                 font-size: 0.8rem;
                 color: #6B7280;
             ">
-                공과대학 전공박람회 주식 시장
-                © 2026 건국대학교 공과대학 모의주식 대회
+                KUSPI © 2026 건국대학교 공과대학 모의주식 대회
                 <br>
                 문의: 운영진 및 교수진
             </div>

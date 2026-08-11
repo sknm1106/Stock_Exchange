@@ -9,7 +9,7 @@ scheduler = None
 
 def update_prices_now():
     """
-    Executes an hourly price update for all 12 engineering departments.
+    Executes an hourly price update for all engineering departments.
     Uses preset price_schedule if available; otherwise applies random walk simulation.
     """
     conn = get_db_connection()
