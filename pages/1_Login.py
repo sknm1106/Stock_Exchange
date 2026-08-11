@@ -110,7 +110,7 @@ with col2:
     # -----------------------------------------------------
     st.markdown(
         """
-        <h1 style="
+        <div style="
             text-align: center;
             font-size: 2.5rem;
             font-weight: 800;
@@ -120,7 +120,7 @@ with col2:
             letter-spacing: -0.5px;
         ">
             KUSPI
-        </h1>
+        </div>
         """,
         unsafe_allow_html=True
     )
