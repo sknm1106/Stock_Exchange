@@ -37,14 +37,10 @@ def update_prices_now():
             # Mark schedule as applied
             cursor.execute("UPDATE price_schedule SET is_applied = 1 WHERE id = ?", (scheduled['id'],))
         else:
-            # Fluctuate by random percentage between -5% and +6%
-            change_percent = random.uniform(-5.0, 6.0)
-            # Add occasional market trend boost
-            if random.random() < 0.15:
-                change_percent += random.choice([-8.0, 10.0])
-                
-            new_price = max(10.0, round(current_price * (1 + change_percent / 100.0), 1))
-            
+            # 직전 가격 대비 -3% ~ +3% 랜덤 변동
+            change_percent = random.uniform(-3.0, 3.0)
+            new_price = round(current_price * (1 + change_percent / 100.0), 1)
+            new_price = max(50.0, min(90.0, new_price))
         # Update current price in department table
         cursor.execute("UPDATE departments SET current_price = ? WHERE id = ?", (new_price, dept_id))
         

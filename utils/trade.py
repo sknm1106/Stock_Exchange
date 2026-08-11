@@ -4,31 +4,45 @@ from utils.date_utils import get_korea_now_str
 
 def get_departments_list():
     """
-    Returns list of all departments with current price, previous price, change amount, and rate.
+    모든 학과의 현재가와 직전 가격 대비 등락 정보를 반환합니다.
     """
-    departments = fetch_all("SELECT * FROM departments ORDER BY id ASC")
+    departments = fetch_all(
+        "SELECT * FROM departments ORDER BY id ASC"
+    )
+
     result = []
-    
+
     for dept in departments:
         dept_id = dept['id']
         curr_price = float(dept['current_price'])
-        
-        # Get previous price from price_history (2nd most recent entry, or base price)
+
+        # 가장 최근 가격 2개 조회
+        # timestamp가 같아도 id가 큰 레코드를 최신으로 판단
         history = fetch_all(
-            "SELECT price FROM price_history WHERE department_id = ? ORDER BY timestamp DESC LIMIT 2",
+            """
+            SELECT id, price, timestamp
+            FROM price_history
+            WHERE department_id = ?
+            ORDER BY timestamp DESC, id DESC
+            LIMIT 2
+            """,
             (dept_id,)
         )
-        
+
         if len(history) >= 2:
             prev_price = float(history[1]['price'])
-        elif len(history) == 1:
-            prev_price = curr_price
         else:
+            # 최초 가격 1건밖에 없으면 변동률 0%
             prev_price = curr_price
-            
+
         change = curr_price - prev_price
-        change_rate = (change / prev_price * 100) if prev_price > 0 else 0.0
-        
+
+        change_rate = (
+            change / prev_price * 100
+            if prev_price > 0
+            else 0.0
+        )
+
         result.append({
             'id': dept_id,
             'name': dept['name'],
@@ -39,29 +53,41 @@ def get_departments_list():
             'change': change,
             'change_rate': change_rate
         })
-        
+
     return result
 
 def get_department_detail(dept_id: int):
-    dept = fetch_one("SELECT * FROM departments WHERE id = ?", (dept_id,))
-    if not dept:
-        return None
-    
-    dept_dict = dict(dept)
-    curr_price = float(dept_dict['current_price'])
-    
-    # History metrics
-    history = fetch_all(
-        "SELECT price, timestamp FROM price_history WHERE department_id = ? ORDER BY timestamp ASC",
+    dept = fetch_one(
+        "SELECT * FROM departments WHERE id = ?",
         (dept_id,)
     )
-    
+
+    if not dept:
+        return None
+
+    dept_dict = dict(dept)
+    curr_price = float(dept_dict['current_price'])
+
+    # 시간순으로 가격 기록 조회
+    # 같은 timestamp일 경우 id 순서로 정렬
+    history = fetch_all(
+        """
+        SELECT id, price, timestamp
+        FROM price_history
+        WHERE department_id = ?
+        ORDER BY timestamp ASC, id ASC
+        """,
+        (dept_id,)
+    )
+
     if history:
         prices = [float(h['price']) for h in history]
+
         high_price = max(prices)
         low_price = min(prices)
+
         if len(prices) >= 2:
-            prev_price = prices[-2]
+            prev_price = float(prices[-2])
         else:
             prev_price = curr_price
     else:
@@ -69,10 +95,15 @@ def get_department_detail(dept_id: int):
         high_price = curr_price
         low_price = curr_price
         prev_price = curr_price
-        
+
     change = curr_price - prev_price
-    change_rate = (change / prev_price * 100) if prev_price > 0 else 0.0
-    
+
+    change_rate = (
+        change / prev_price * 100
+        if prev_price > 0
+        else 0.0
+    )
+
     dept_dict.update({
         'current_price': curr_price,
         'prev_price': prev_price,
@@ -82,7 +113,7 @@ def get_department_detail(dept_id: int):
         'change_rate': change_rate,
         'history': [dict(h) for h in history]
     })
-    
+
     return dept_dict
 
 def buy_stock(student_id: str, department_id: int, quantity: int):

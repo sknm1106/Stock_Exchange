@@ -1,0 +1,10 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Local DB backups
+*_backup.db
+*_before_reset.db
+
+fix.md
+fix2.md
