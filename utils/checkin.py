@@ -78,82 +78,228 @@ def resolve_qr_event(identifier: str):
 
 def process_checkin(student_id: str, qr_identifier: str):
     """
-    Process QR check-in for a student for any of the 14 QR events.
-    Checks UNIQUE constraint (student_id + qr_event_id).
-    Grants 100 Coin on first scan; 0 Coin on re-scan.
+    QR 체크인 처리
+
+    - 각 QR마다 최초 1회 100 Coin 지급
+    - 다른 QR을 찍으면 추가로 100 Coin 지급
+    - 같은 QR을 다시 찍으면 추가 지급 없음
+
+    예:
+    컴퓨터공학부 QR → 100 Coin
+    사회환경공학부 QR → 200 Coin
+    전기전자공학부 QR → 300 Coin
+    컴퓨터공학부 QR 재방문 → 300 Coin 유지
     """
+
     student_id = str(student_id).strip()
+
     if not student_id:
-        return {"success": False, "message": "학번 정보가 올바르지 않습니다."}
-        
+        return {
+            "success": False,
+            "message": "학번 정보가 올바르지 않습니다."
+        }
+
+
+    # QR 정보 확인
     qr_event_id, event_info = resolve_qr_event(qr_identifier)
+
     if not qr_event_id or not event_info:
-        return {"success": False, "message": "유효하지 않은 QR 코드입니다."}
-        
+        return {
+            "success": False,
+            "message": "유효하지 않은 QR 코드입니다."
+        }
+
+
     event_name = event_info["name"]
     dept_id = event_info["dept_id"]
-    
-    user = fetch_one("SELECT * FROM users WHERE student_id = ?", (student_id,))
-    if not user:
-        return {"success": False, "message": "사용자를 찾을 수 없습니다."}
-        
-    current_coin = float(user['coin'])
-    
-    # Check existing checkin in qr_checkins
-    existing = fetch_one(
-        "SELECT * FROM qr_checkins WHERE student_id = ? AND qr_event_id = ?",
-        (student_id, qr_event_id)
+
+
+    # 사용자 확인
+    user = fetch_one(
+        "SELECT * FROM users WHERE student_id = ?",
+        (student_id,)
     )
-    
-    if existing:
+
+    if not user:
         return {
-            "success": True,
-            "already_rewarded": True,
-            "message": f"이미 **{event_name}** 이벤트 참여 보상을 받으셨습니다.\n동일한 QR 보상은 1회만 지급됩니다.",
-            "event_name": event_name,
-            "dept_name": event_name,
-            "dept_id": dept_id,
-            "coin_added": 0.0,
-            "user_coin": current_coin
+            "success": False,
+            "message": "사용자를 찾을 수 없습니다."
         }
-        
-    # Record checkin and grant reward
-    now_str = get_korea_now_str()
-    try:
-        execute_query(
-            "INSERT INTO qr_checkins (student_id, qr_event_id, event_name, reward_coin, checked_in_at) VALUES (?, ?, ?, ?, ?)",
-            (student_id, qr_event_id, event_name, REWARD_PER_EVENT, now_str)
+
+
+    current_coin = float(user["coin"] or 0)
+
+
+    # =====================================================
+    # 이 학생이 이 QR 보상을 이미 받았는지 확인
+    # =====================================================
+
+    existing = fetch_one(
+        """
+        SELECT *
+        FROM qr_checkins
+        WHERE student_id = ?
+          AND qr_event_id = ?
+        """,
+        (
+            student_id,
+            qr_event_id
         )
-    except sqlite3.IntegrityError:
-        # Handled duplicate constraint race condition
+    )
+
+
+    # 같은 QR을 이미 찍은 경우 → 추가 지급 X
+    if existing:
+
         return {
             "success": True,
             "already_rewarded": True,
-            "message": f"이미 **{event_name}** 이벤트 참여 보상을 받으셨습니다.\n동일한 QR 보상은 1회만 지급됩니다.",
+            "message": (
+                f"이미 **{event_name}** 참여 보상을 받으셨습니다.\n"
+                "동일한 QR 보상은 1회만 지급됩니다."
+            ),
             "event_name": event_name,
             "dept_name": event_name,
             "dept_id": dept_id,
             "coin_added": 0.0,
             "user_coin": current_coin
         }
-        
-    # Also sync with department_checkins if it's a department QR
-    if dept_id:
-        try:
-            execute_query(
-                "INSERT INTO department_checkins (event_id, student_id, department_id, reward_coin, checked_in_at) VALUES (?, ?, ?, ?, ?)",
-                ("2026_EXPO", student_id, dept_id, REWARD_PER_EVENT, now_str)
+
+
+    # =====================================================
+    # 처음 방문한 QR
+    # =====================================================
+
+    now_str = get_korea_now_str()
+
+
+    # QR 방문 기록 저장
+    try:
+
+        execute_query(
+            """
+            INSERT INTO qr_checkins (
+                student_id,
+                qr_event_id,
+                event_name,
+                reward_coin,
+                checked_in_at
             )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                student_id,
+                qr_event_id,
+                event_name,
+                REWARD_PER_EVENT,
+                now_str
+            )
+        )
+
+    except sqlite3.IntegrityError:
+
+        # 동시에 두 번 요청된 경우에도 중복 지급 방지
+        refreshed_user = fetch_one(
+            "SELECT coin FROM users WHERE student_id = ?",
+            (student_id,)
+        )
+
+        latest_coin = float(
+            refreshed_user["coin"] or 0
+        ) if refreshed_user else current_coin
+
+        return {
+            "success": True,
+            "already_rewarded": True,
+            "message": (
+                f"이미 **{event_name}** 참여 보상을 받으셨습니다.\n"
+                "동일한 QR 보상은 1회만 지급됩니다."
+            ),
+            "event_name": event_name,
+            "dept_name": event_name,
+            "dept_id": dept_id,
+            "coin_added": 0.0,
+            "user_coin": latest_coin
+        }
+
+
+    # =====================================================
+    # 학과 QR인 경우 department_checkins에도 기록
+    # =====================================================
+
+    if dept_id is not None:
+
+        try:
+
+            execute_query(
+                """
+                INSERT INTO department_checkins (
+                    event_id,
+                    student_id,
+                    department_id,
+                    reward_coin,
+                    checked_in_at
+                )
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    "2026_EXPO",
+                    student_id,
+                    dept_id,
+                    REWARD_PER_EVENT,
+                    now_str
+                )
+            )
+
         except Exception:
             pass
 
-    new_coin = current_coin + REWARD_PER_EVENT
-    execute_query("UPDATE users SET coin = ? WHERE student_id = ?", (new_coin, student_id))
-    
+
+    # =====================================================
+    # 핵심
+    # 현재 보유 Coin에 +100 누적
+    # =====================================================
+
+    execute_query(
+        """
+        UPDATE users
+        SET coin = COALESCE(coin, 0) + ?
+        WHERE student_id = ?
+        """,
+        (
+            REWARD_PER_EVENT,
+            student_id
+        )
+    )
+
+
+    # =====================================================
+    # 지급 후 실제 DB의 최신 Coin 다시 조회
+    # =====================================================
+
+    refreshed_user = fetch_one(
+        """
+        SELECT coin
+        FROM users
+        WHERE student_id = ?
+        """,
+        (student_id,)
+    )
+
+
+    new_coin = float(
+        refreshed_user["coin"] or 0
+    )
+
+
     return {
         "success": True,
         "already_rewarded": False,
-        "message": f"🎉 **{event_name}** 이벤트 참여 완료!\n**{REWARD_PER_EVENT:,.0f} Coin**이 지급되었습니다.",
+        "message": (
+            f"🎉 **{event_name}** 참여 완료!\n"
+            f"**+{REWARD_PER_EVENT:,.0f} Coin**이 지급되었습니다.\n"
+            f"현재 보유 코인: **{new_coin:,.0f} Coin**"
+        ),
         "event_name": event_name,
         "dept_name": event_name,
         "dept_id": dept_id,

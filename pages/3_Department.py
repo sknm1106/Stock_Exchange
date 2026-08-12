@@ -398,22 +398,41 @@ render_html(
 # 24시간 최고 / 최저 제거
 # =========================================================
 
+# =========================================================
+# 현재가 핵심 카드
+# =========================================================
+
 render_html(
     f"""
-    <div class="mobile-stock-summary">
+    <div class="stock-price-card">
 
-        <div class="mobile-stock-main">
-            <span class="mobile-current-price">
+        <div class="stock-price-label">
+            현재가
+        </div>
+
+        <div class="stock-price-row">
+
+            <span
+                class="stock-price-number"
+                style="
+                    font-size: 2.5rem;
+                    font-weight: 900;
+                    line-height: 1;
+                    letter-spacing: -1.5px;
+                    color: #111827;
+                "
+            >
                 {current_price:,.1f}
             </span>
 
-            <span class="mobile-coin-unit">
+            <span class="stock-price-unit">
                 Coin
             </span>
+
         </div>
 
         <div
-            class="mobile-stock-change"
+            class="stock-price-change"
             style="color:{change_color};"
         >
             {change_symbol}
@@ -421,15 +440,27 @@ render_html(
             ({change_rate:+.1f}%)
         </div>
 
-        <div class="mobile-stock-assets">
+        <div class="stock-user-assets">
 
-            <span>
-                💰 {user_coin:,.1f} Coin
-            </span>
+            <div>
+                <span class="asset-label">
+                    보유 코인
+                </span>
 
-            <span>
-                📦 {holding_qty}주 보유
-            </span>
+                <strong>
+                    💰 {user_coin:,.1f}
+                </strong>
+            </div>
+
+            <div>
+                <span class="asset-label">
+                    보유 주식
+                </span>
+
+                <strong>
+                    📦 {holding_qty}주
+                </strong>
+            </div>
 
         </div>
 
@@ -485,44 +516,6 @@ else:
         "아직 표시할 시세 데이터가 없습니다."
     )
 
-
-# =========================================================
-# 학과 설명
-# =========================================================
-
-if description:
-
-    render_html(
-        f"""
-        <div style="
-            background:#FFFFFF;
-            border:1px solid #E5E7EB;
-            border-radius:12px;
-            padding:14px;
-            margin-top:4px;
-            margin-bottom:22px;
-        ">
-
-            <div style="
-                font-size:0.82rem;
-                color:#6B7280;
-                font-weight:700;
-                margin-bottom:5px;
-            ">
-                💡 학과 설명
-            </div>
-
-            <div style="
-                font-size:0.92rem;
-                color:#374151;
-                line-height:1.55;
-            ">
-                {safe_description}
-            </div>
-
-        </div>
-        """
-    )
 
 
 # =========================================================
