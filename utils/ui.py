@@ -188,6 +188,113 @@ def apply_custom_theme():
         color: #00703E !important;
         font-weight: 700;
     }
+    /* ===============================
+    Mobile responsive
+    ================================ */
+
+    .mobile-stock-summary {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 14px;
+        padding: 16px 18px;
+        margin: 10px 0 18px 0;
+    }
+
+    .mobile-stock-main {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+    }
+
+    .mobile-current-price {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #1F2937;
+        line-height: 1.1;
+    }
+
+    .mobile-coin-unit {
+        font-size: 0.85rem;
+        color: #9CA3AF;
+    }
+
+    .mobile-stock-change {
+        margin-top: 5px;
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .mobile-stock-assets {
+        display: flex;
+        gap: 18px;
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid #F1F3F5;
+        font-size: 0.9rem;
+        color: #4B5563;
+        font-weight: 600;
+    }
+
+
+    /* Smartphone */
+    @media (max-width: 768px) {
+
+        .block-container {
+            padding-left: 14px !important;
+            padding-right: 14px !important;
+            padding-top: 1rem !important;
+            max-width: 100% !important;
+        }
+
+        h1 {
+            font-size: 1.55rem !important;
+        }
+
+        h2 {
+            font-size: 1.35rem !important;
+        }
+
+        h3 {
+            font-size: 1.15rem !important;
+        }
+
+        .glass-card {
+            padding: 12px !important;
+            margin-bottom: 10px !important;
+            border-radius: 12px !important;
+        }
+
+        .price-large {
+            font-size: 1.55rem !important;
+        }
+
+        .mobile-current-price {
+            font-size: 1.9rem;
+        }
+
+        .mobile-stock-assets {
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        div[data-testid="stHorizontalBlock"] {
+            gap: 0.5rem;
+        }
+
+        div.stButton > button {
+            min-height: 46px;
+            font-size: 0.95rem;
+        }
+
+        [data-testid="stNumberInput"] input {
+            font-size: 16px !important;
+        }
+
+        [data-testid="stPlotlyChart"] {
+            margin-left: -4px;
+            margin-right: -4px;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 

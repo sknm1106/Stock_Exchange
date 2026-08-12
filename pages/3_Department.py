@@ -1,217 +1,976 @@
 import os
 import sys
+import html
+import textwrap
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import streamlit as st
+
+
+# =========================================================
+# 프로젝트 루트 경로 설정
+# =========================================================
+
+ROOT_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(__file__)
+    )
+)
+
 if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
 
-import streamlit as st
+
+# =========================================================
+# 프로젝트 모듈
+# =========================================================
+
 from utils.ui import render_header, check_login
 from utils.trade import (
-    get_departments_list, 
-    get_department_detail, 
-    buy_stock, 
-    sell_stock, 
-    get_user_holdings
+    get_departments_list,
+    get_department_detail,
+    buy_stock,
+    sell_stock,
+    get_user_holdings,
 )
 from utils.graph import create_price_chart
 from utils.auth import get_user
 from utils.database import fetch_all
 
+
+# =========================================================
+# 페이지 설정
+# =========================================================
+
 st.set_page_config(
     page_title="KUSPI | 학과 상세",
     page_icon="🟢",
-    layout="wide"
+    layout="wide",
 )
+
+
+# =========================================================
+# HTML 출력 함수
+#
+# 핵심:
+# 1. st.html() 사용
+# 2. st.html() 미지원 버전에서는 HTML을 한 줄로 압축
+#    → Markdown 코드블록으로 인식되는 현상 방지
+# =========================================================
+
+def render_html(content: str):
+    cleaned = textwrap.dedent(content).strip()
+
+    if hasattr(st, "html"):
+        st.html(cleaned)
+
+    else:
+        one_line_html = " ".join(
+            line.strip()
+            for line in cleaned.splitlines()
+            if line.strip()
+        )
+
+        st.markdown(
+            one_line_html,
+            unsafe_allow_html=True,
+        )
+
+
+# =========================================================
+# 공통 Header / 로그인 체크
+# =========================================================
 
 render_header()
 check_login()
 
-user = st.session_state['user']
-student_id = user['student_id']
 
-# Get list of all departments
-all_depts = get_departments_list()
-dept_options = {d['name']: d['id'] for d in all_depts}
-dept_names = list(dept_options.keys())
+# =========================================================
+# 사용자 정보
+# =========================================================
 
-# Determine initial selected index
-default_idx = 0
-if 'selected_dept_id' in st.session_state:
-    target_id = st.session_state['selected_dept_id']
-    for idx, d in enumerate(all_depts):
-        if d['id'] == target_id:
-            default_idx = idx
-            break
+session_user = st.session_state["user"]
+student_id = session_user["student_id"]
 
-col_selector, col_back = st.columns([4, 1])
-with col_selector:
-    selected_dept_name = st.selectbox("🏬 학과 선택", dept_names, index=default_idx)
-with col_back:
-    st.markdown("<div style='padding-top: 28px;'></div>", unsafe_allow_html=True)
-    if st.button("⬅️ 시세 목록으로", use_container_width=True):
-        st.switch_page("pages/2_Home.py")
 
-dept_id = dept_options[selected_dept_name]
-st.session_state['selected_dept_id'] = dept_id
+# DB에서 최신 사용자 정보 다시 조회
+user_info_raw = get_user(student_id)
 
-# Fetch detailed department info
-dept = get_department_detail(dept_id)
+if not user_info_raw:
+    st.error("사용자 정보를 불러올 수 없습니다.")
+    st.stop()
 
-if not dept:
+
+# sqlite Row / dict 둘 다 대응
+user_info = dict(user_info_raw)
+
+st.session_state["user"] = user_info
+
+user_coin = float(
+    user_info.get("coin", 0) or 0
+)
+
+
+# =========================================================
+# 학과 목록 조회
+# =========================================================
+
+all_depts_raw = get_departments_list()
+
+if not all_depts_raw:
     st.error("학과 정보를 불러올 수 없습니다.")
     st.stop()
 
-# Header Metrics Card
-change_color = "#059669" if dept['change'] > 0 else ("#DC2626" if dept['change'] < 0 else "#6B7280")
-change_symbol = "▲" if dept['change'] > 0 else ("▼" if dept['change'] < 0 else "-")
 
-c_m1, c_m2, c_m3, c_m4, c_m5 = st.columns(5)
+all_depts = [
+    dict(d)
+    for d in all_depts_raw
+]
 
-with c_m1:
-    st.markdown(f"""
-    <div class="glass-card">
-        <div style="font-size: 0.8rem; color: #6B7280;">현재가</div>
-        <div class="price-large">{dept['current_price']:,.1f}</div>
-        <div style="font-size: 0.75rem; color: #9CA3AF;">Coin</div>
-    </div>
-    """, unsafe_allow_html=True)
 
-with c_m2:
-    st.markdown(f"""
-    <div class="glass-card">
-        <div style="font-size: 0.8rem; color: #6B7280;">변동률</div>
-        <div style="font-size: 1.8rem; font-weight: 800; color: {change_color};">
-            {change_symbol} {abs(dept['change']):.1f}
+dept_options = {
+    d["name"]: d["id"]
+    for d in all_depts
+}
+
+dept_names = list(
+    dept_options.keys()
+)
+
+
+# =========================================================
+# QR을 통해 들어온 경우 해당 학과 자동 선택
+# =========================================================
+
+default_idx = 0
+
+selected_dept_id = st.session_state.get(
+    "selected_dept_id"
+)
+
+if selected_dept_id is not None:
+
+    for idx, item in enumerate(all_depts):
+
+        if item["id"] == selected_dept_id:
+            default_idx = idx
+            break
+
+
+# =========================================================
+# 학과 선택 / 시세 목록 이동
+# =========================================================
+
+selector_col, back_col = st.columns(
+    [4, 1]
+)
+
+
+with selector_col:
+
+    selected_dept_name = st.selectbox(
+        "🏬 학과 선택",
+        dept_names,
+        index=default_idx,
+        key="department_selector",
+    )
+
+
+with back_col:
+
+    # selectbox와 버튼 높이 맞추기
+    st.markdown(
+        "<div style='height:28px;'></div>",
+        unsafe_allow_html=True,
+    )
+
+    if st.button(
+        "⬅️ 시세 목록으로",
+        use_container_width=True,
+        key="back_to_market",
+    ):
+
+        st.switch_page(
+            "pages/2_Home.py"
+        )
+
+
+# =========================================================
+# 선택 학과 ID
+# =========================================================
+
+dept_id = dept_options[
+    selected_dept_name
+]
+
+st.session_state[
+    "selected_dept_id"
+] = dept_id
+
+
+# =========================================================
+# 학과 상세 정보
+# =========================================================
+
+dept_raw = get_department_detail(
+    dept_id
+)
+
+if not dept_raw:
+    st.error("학과 정보를 불러올 수 없습니다.")
+    st.stop()
+
+
+dept = dict(dept_raw)
+
+
+# =========================================================
+# 기본 데이터 안전하게 변환
+# =========================================================
+
+dept_name = str(
+    dept.get("name", selected_dept_name)
+)
+
+current_price = float(
+    dept.get("current_price", 0) or 0
+)
+
+change = float(
+    dept.get("change", 0) or 0
+)
+
+change_rate = float(
+    dept.get("change_rate", 0) or 0
+)
+
+description = str(
+    dept.get("description", "") or ""
+)
+
+history = dept.get(
+    "history",
+    []
+)
+
+
+# HTML에 DB 문자열 직접 넣을 때 안전 처리
+safe_dept_name = html.escape(
+    dept_name
+)
+
+safe_description = html.escape(
+    description
+)
+
+
+# =========================================================
+# 사용자 보유 주식 조회
+# =========================================================
+
+holdings_raw = get_user_holdings(
+    student_id
+)
+
+holdings = [
+    dict(h)
+    for h in (holdings_raw or [])
+]
+
+
+dept_holding = next(
+    (
+        h
+        for h in holdings
+        if h.get("department_id") == dept_id
+    ),
+    None,
+)
+
+
+if dept_holding:
+
+    holding_qty = int(
+        dept_holding.get(
+            "quantity",
+            0,
+        ) or 0
+    )
+
+    avg_price = float(
+        dept_holding.get(
+            "average_price",
+            0,
+        ) or 0
+    )
+
+else:
+
+    holding_qty = 0
+    avg_price = 0.0
+
+
+# =========================================================
+# 등락 표시
+# =========================================================
+
+if change > 0:
+
+    change_color = "#059669"
+    change_symbol = "▲"
+
+elif change < 0:
+
+    change_color = "#DC2626"
+    change_symbol = "▼"
+
+else:
+
+    change_color = "#6B7280"
+    change_symbol = "－"
+
+
+# =========================================================
+# QR 참여 성공 메시지
+# =========================================================
+
+if st.session_state.get(
+    "show_checkin_message",
+    False,
+):
+
+    checkin_result = st.session_state.get(
+        "last_checkin_res",
+        {},
+    )
+
+    reward = 100
+
+    if isinstance(checkin_result, dict):
+        reward = checkin_result.get(
+            "reward",
+            100,
+        ) or 100
+
+    st.success(
+        f"🎉 {dept_name} 참여 완료! "
+        f"+{reward} Coin이 지급되었습니다."
+    )
+
+    # 한 번만 노출
+    st.session_state[
+        "show_checkin_message"
+    ] = False
+
+
+# =========================================================
+# 학과 제목
+# =========================================================
+
+render_html(
+    f"""
+    <div style="
+        margin-top: 6px;
+        margin-bottom: 12px;
+    ">
+        <div style="
+            font-size: 1.75rem;
+            line-height: 1.3;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #1F2937;
+        ">
+            {safe_dept_name}
         </div>
-        <div style="font-size: 0.85rem; font-weight: 700; color: {change_color};">
-            ({dept['change_rate']:+.1f}%)
+    </div>
+    """
+)
+
+
+# =========================================================
+# 핵심 시세 카드
+#
+# 모바일에서는 필요한 값만 보여줌
+# - 현재가
+# - 변동률
+# - 보유 Coin
+# - 보유 주식
+#
+# 24시간 최고 / 최저 제거
+# =========================================================
+
+render_html(
+    f"""
+    <div class="mobile-stock-summary">
+
+        <div class="mobile-stock-main">
+            <span class="mobile-current-price">
+                {current_price:,.1f}
+            </span>
+
+            <span class="mobile-coin-unit">
+                Coin
+            </span>
         </div>
+
+        <div
+            class="mobile-stock-change"
+            style="color:{change_color};"
+        >
+            {change_symbol}
+            {abs(change):,.1f}
+            ({change_rate:+.1f}%)
+        </div>
+
+        <div class="mobile-stock-assets">
+
+            <span>
+                💰 {user_coin:,.1f} Coin
+            </span>
+
+            <span>
+                📦 {holding_qty}주 보유
+            </span>
+
+        </div>
+
     </div>
-    """, unsafe_allow_html=True)
+    """
+)
 
-with c_m3:
-    st.markdown(f"""
-    <div class="glass-card">
-        <div style="font-size: 0.8rem; color: #6B7280;">24시간 최고가</div>
-        <div style="font-size: 1.8rem; font-weight: 800; color: #2563EB;">{dept['high_price']:,.1f}</div>
-        <div style="font-size: 0.75rem; color: #9CA3AF;">Coin</div>
-    </div>
-    """, unsafe_allow_html=True)
 
-with c_m4:
-    st.markdown(f"""
-    <div class="glass-card">
-        <div style="font-size: 0.8rem; color: #6B7280;">24시간 최저가</div>
-        <div style="font-size: 1.8rem; font-weight: 800; color: #D97706;">{dept['low_price']:,.1f}</div>
-        <div style="font-size: 0.75rem; color: #9CA3AF;">Coin</div>
-    </div>
-    """, unsafe_allow_html=True)
+# =========================================================
+# 시세 차트
+# =========================================================
 
-# User holding for this dept
-user_holdings = get_user_holdings(student_id)
-dept_holding = next((h for h in user_holdings if h['department_id'] == dept_id), None)
-holding_qty = dept_holding['quantity'] if dept_holding else 0
-avg_price = dept_holding['average_price'] if dept_holding else 0.0
+st.markdown(
+    "### 📈 시세"
+)
 
-with c_m5:
-    st.markdown(f"""
-    <div class="glass-card">
-        <div style="font-size: 0.8rem; color: #6B7280;">내 보유 수량</div>
-        <div style="font-size: 1.8rem; font-weight: 800; color: #00703E;">{holding_qty} 주</div>
-        <div style="font-size: 0.75rem; color: #6B7280;">평단가: {avg_price:,.1f} Coin</div>
-    </div>
-    """, unsafe_allow_html=True)
 
-# Main Section: Chart on Left, Trade Widget on Right
-col_chart, col_trade = st.columns([3, 2])
+if history:
 
-with col_chart:
-    st.markdown(f"<h4 style='color:#1F2937;'>📈 {dept['name']} 주가 차트</h4>", unsafe_allow_html=True)
-    fig = create_price_chart(dept['history'], dept['name'])
-    st.plotly_chart(fig, use_container_width=True)
-    
-    st.markdown("""
-    <div style="background: #FFFFFF; border: 1px solid #E5E7EB; padding: 12px 16px; border-radius: 10px; margin-top: -10px;">
-        <span style="font-size: 0.85rem; color: #4B5563;">💡 <b>학과 설명:</b> {}</span>
-    </div>
-    """.format(dept['description']), unsafe_allow_html=True)
+    try:
 
-with col_trade:
-    st.markdown("<h4 style='color:#1F2937;'>⚡ 주식 주문</h4>", unsafe_allow_html=True)
-    
-    tab_buy, tab_sell = st.tabs(["🛒 매수 (Buy)", "💰 매도 (Sell)"])
-    
-    user_coin = float(get_user(student_id)['coin'])
-    current_price = dept['current_price']
-    
-    with tab_buy:
-        st.markdown(f"**보유 코인:** `🪙 {user_coin:,.1f} Coin`")
-        max_buy_qty = int(user_coin // current_price) if current_price > 0 else 0
-        
+        fig = create_price_chart(
+            history,
+            dept_name,
+        )
+
+        # 모바일에서 차트가 지나치게 커지지 않게 제한
+        fig.update_layout(
+            height=300,
+            margin=dict(
+                l=5,
+                r=5,
+                t=20,
+                b=10,
+            ),
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            key=f"price_chart_{dept_id}",
+        )
+
+    except Exception as e:
+
+        st.warning(
+            "시세 차트를 불러오지 못했습니다."
+        )
+
+else:
+
+    st.info(
+        "아직 표시할 시세 데이터가 없습니다."
+    )
+
+
+# =========================================================
+# 학과 설명
+# =========================================================
+
+if description:
+
+    render_html(
+        f"""
+        <div style="
+            background:#FFFFFF;
+            border:1px solid #E5E7EB;
+            border-radius:12px;
+            padding:14px;
+            margin-top:4px;
+            margin-bottom:22px;
+        ">
+
+            <div style="
+                font-size:0.82rem;
+                color:#6B7280;
+                font-weight:700;
+                margin-bottom:5px;
+            ">
+                💡 학과 설명
+            </div>
+
+            <div style="
+                font-size:0.92rem;
+                color:#374151;
+                line-height:1.55;
+            ">
+                {safe_description}
+            </div>
+
+        </div>
+        """
+    )
+
+
+# =========================================================
+# 주문
+# =========================================================
+
+st.markdown(
+    "### ⚡ 주문"
+)
+
+
+tab_buy, tab_sell = st.tabs(
+    [
+        "🛒 매수",
+        "💰 매도",
+    ]
+)
+
+
+# =========================================================
+# 매수 탭
+# =========================================================
+
+with tab_buy:
+
+    # -----------------------------------------------------
+    # 보유 Coin / 현재 가격
+    # -----------------------------------------------------
+
+    render_html(
+        f"""
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:12px;
+
+            background:#FFFFFF;
+            border:1px solid #E5E7EB;
+            border-radius:12px;
+
+            padding:13px 14px;
+            margin-top:10px;
+            margin-bottom:15px;
+        ">
+
+            <div>
+                <div style="
+                    font-size:0.78rem;
+                    color:#6B7280;
+                    margin-bottom:3px;
+                ">
+                    보유 코인
+                </div>
+
+                <div style="
+                    font-size:1rem;
+                    font-weight:800;
+                    color:#1F2937;
+                    white-space:nowrap;
+                ">
+                    🪙 {user_coin:,.1f} Coin
+                </div>
+            </div>
+
+
+            <div style="
+                text-align:right;
+            ">
+                <div style="
+                    font-size:0.78rem;
+                    color:#6B7280;
+                    margin-bottom:3px;
+                ">
+                    1주 가격
+                </div>
+
+                <div style="
+                    font-size:1rem;
+                    font-weight:800;
+                    color:#1F2937;
+                    white-space:nowrap;
+                ">
+                    {current_price:,.1f} Coin
+                </div>
+            </div>
+
+        </div>
+        """
+    )
+
+
+    # -----------------------------------------------------
+    # 최대 매수 가능 수량
+    # -----------------------------------------------------
+
+    if current_price > 0:
+
+        max_buy_qty = int(
+            user_coin // current_price
+        )
+
+    else:
+
+        max_buy_qty = 0
+
+
+    # -----------------------------------------------------
+    # 매수 불가능
+    # -----------------------------------------------------
+
+    if max_buy_qty <= 0:
+
+        st.warning(
+            "보유 코인이 부족하여 이 주식을 매수할 수 없습니다."
+        )
+
+
+    # -----------------------------------------------------
+    # 매수 가능
+    # -----------------------------------------------------
+
+    else:
+
         buy_qty = st.number_input(
             "매수 수량 (주)",
             min_value=1,
-            max_value=max(1, max_buy_qty),
+            max_value=max_buy_qty,
             value=1,
             step=1,
-            key="buy_qty_input"
+            key=f"buy_qty_{dept_id}",
         )
-        total_buy_cost = buy_qty * current_price
-        st.markdown(f"""
-        <div style="background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.3); padding: 14px; border-radius: 10px; margin: 15px 0;">
-            <div style="font-size: 0.85rem; color: #4B5563;">총 결제 금액</div>
-            <div style="font-size: 1.5rem; font-weight: 800; color: #059669;">{total_buy_cost:,.1f} Coin</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("🚀 매수 주문 제출", type="primary", use_container_width=True, key="submit_buy_btn"):
-            success, msg = buy_stock(student_id, dept_id, buy_qty)
+
+
+        total_buy_cost = (
+            float(buy_qty)
+            * current_price
+        )
+
+
+        render_html(
+            f"""
+            <div style="
+                background:rgba(5,150,105,0.08);
+                border:1px solid rgba(5,150,105,0.25);
+                border-radius:12px;
+                padding:14px;
+                margin:14px 0;
+            ">
+
+                <div style="
+                    color:#4B5563;
+                    font-size:0.8rem;
+                    margin-bottom:2px;
+                ">
+                    총 결제 금액
+                </div>
+
+                <div style="
+                    color:#059669;
+                    font-size:1.4rem;
+                    font-weight:800;
+                ">
+                    {total_buy_cost:,.1f} Coin
+                </div>
+
+            </div>
+            """
+        )
+
+
+        if st.button(
+            (
+                f"🛒 {buy_qty}주 매수하기 "
+                f"· {total_buy_cost:,.1f} Coin"
+            ),
+            type="primary",
+            use_container_width=True,
+            key=f"submit_buy_{dept_id}",
+        ):
+
+            success, message = buy_stock(
+                student_id,
+                dept_id,
+                int(buy_qty),
+            )
+
+
             if success:
-                st.success(msg)
+
+                st.success(message)
+
+                # 거래 후 최신 사용자 정보 반영
+                refreshed_user = get_user(
+                    student_id
+                )
+
+                if refreshed_user:
+
+                    st.session_state[
+                        "user"
+                    ] = dict(
+                        refreshed_user
+                    )
+
                 st.rerun()
+
+
             else:
-                st.error(msg)
-                
-    with tab_sell:
-        st.markdown(f"**현재 보유 수량:** `{holding_qty} 주`")
-        
+
+                st.error(
+                    message
+                )
+
+
+# =========================================================
+# 매도 탭
+# =========================================================
+
+with tab_sell:
+
+    render_html(
+        f"""
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:12px;
+
+            background:#FFFFFF;
+            border:1px solid #E5E7EB;
+            border-radius:12px;
+
+            padding:13px 14px;
+            margin-top:10px;
+            margin-bottom:15px;
+        ">
+
+            <div>
+                <div style="
+                    font-size:0.78rem;
+                    color:#6B7280;
+                    margin-bottom:3px;
+                ">
+                    현재 보유
+                </div>
+
+                <div style="
+                    font-size:1rem;
+                    font-weight:800;
+                    color:#1F2937;
+                    white-space:nowrap;
+                ">
+                    📦 {holding_qty}주
+                </div>
+            </div>
+
+
+            <div style="
+                text-align:right;
+            ">
+                <div style="
+                    font-size:0.78rem;
+                    color:#6B7280;
+                    margin-bottom:3px;
+                ">
+                    현재 가격
+                </div>
+
+                <div style="
+                    font-size:1rem;
+                    font-weight:800;
+                    color:#1F2937;
+                    white-space:nowrap;
+                ">
+                    {current_price:,.1f} Coin
+                </div>
+            </div>
+
+        </div>
+        """
+    )
+
+
+    # -----------------------------------------------------
+    # 보유 주식이 없는 경우
+    # -----------------------------------------------------
+
+    if holding_qty <= 0:
+
+        st.info(
+            "현재 이 학과의 주식을 보유하고 있지 않습니다."
+        )
+
+
+    # -----------------------------------------------------
+    # 매도 가능
+    # -----------------------------------------------------
+
+    else:
+
         sell_qty = st.number_input(
             "매도 수량 (주)",
             min_value=1,
-            max_value=max(1, holding_qty),
-            value=min(1, holding_qty) if holding_qty > 0 else 1,
+            max_value=holding_qty,
+            value=1,
             step=1,
-            key="sell_qty_input"
+            key=f"sell_qty_{dept_id}",
         )
-        total_sell_income = sell_qty * current_price
-        st.markdown(f"""
-        <div style="background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.3); padding: 14px; border-radius: 10px; margin: 15px 0;">
-            <div style="font-size: 0.85rem; color: #4B5563;">예상 정산 금액</div>
-            <div style="font-size: 1.5rem; font-weight: 800; color: #DC2626;">{total_sell_income:,.1f} Coin</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("💰 매도 주문 제출", type="primary", use_container_width=True, key="submit_sell_btn"):
-            if holding_qty == 0:
-                st.error("보유한 수량이 없어 매도할 수 없습니다.")
-            else:
-                success, msg = sell_stock(student_id, dept_id, sell_qty)
-                if success:
-                    st.success(msg)
-                    st.rerun()
-                else:
-                    st.error(msg)
 
-# Department Specific News
-st.markdown(f"<h4 style='margin-top: 30px; color:#1F2937;'>📰 {dept['name']} 최근 관련 소식</h4>", unsafe_allow_html=True)
-dept_news = fetch_all(
-    "SELECT * FROM news WHERE department_id = ? ORDER BY timestamp DESC LIMIT 3", 
-    (dept_id,)
+
+        total_sell_income = (
+            float(sell_qty)
+            * current_price
+        )
+
+
+        render_html(
+            f"""
+            <div style="
+                background:rgba(220,38,38,0.07);
+                border:1px solid rgba(220,38,38,0.22);
+                border-radius:12px;
+                padding:14px;
+                margin:14px 0;
+            ">
+
+                <div style="
+                    color:#4B5563;
+                    font-size:0.8rem;
+                    margin-bottom:2px;
+                ">
+                    예상 정산 금액
+                </div>
+
+                <div style="
+                    color:#DC2626;
+                    font-size:1.4rem;
+                    font-weight:800;
+                ">
+                    {total_sell_income:,.1f} Coin
+                </div>
+
+            </div>
+            """
+        )
+
+
+        if st.button(
+            (
+                f"💰 {sell_qty}주 매도하기 "
+                f"· {total_sell_income:,.1f} Coin"
+            ),
+            use_container_width=True,
+            key=f"submit_sell_{dept_id}",
+        ):
+
+            success, message = sell_stock(
+                student_id,
+                dept_id,
+                int(sell_qty),
+            )
+
+
+            if success:
+
+                st.success(
+                    message
+                )
+
+                refreshed_user = get_user(
+                    student_id
+                )
+
+                if refreshed_user:
+
+                    st.session_state[
+                        "user"
+                    ] = dict(
+                        refreshed_user
+                    )
+
+                st.rerun()
+
+
+            else:
+
+                st.error(
+                    message
+                )
+
+
+# =========================================================
+# 최근 관련 소식
+# =========================================================
+
+st.markdown(
+    f"### 📰 {dept_name} 최근 소식"
 )
 
+
+dept_news = fetch_all(
+    """
+    SELECT *
+    FROM news
+    WHERE department_id = ?
+    ORDER BY timestamp DESC
+    LIMIT 3
+    """,
+    (dept_id,),
+)
+
+
 if dept_news:
-    for news in dept_news:
-        st.info(f"**[{news['timestamp'][:16]}] {news['title']}**\n\n{news['content']}")
+
+    for item in dept_news:
+
+        news = dict(item)
+
+        timestamp = str(
+            news.get(
+                "timestamp",
+                "",
+            )
+        )[:16]
+
+        title = str(
+            news.get(
+                "title",
+                "",
+            )
+        )
+
+        content = str(
+            news.get(
+                "content",
+                "",
+            )
+        )
+
+        st.info(
+            f"**[{timestamp}] {title}**\n\n"
+            f"{content}"
+        )
+
+
 else:
-    st.caption("해당 학과의 최근 소식이 없습니다.")
+
+    st.caption(
+        "해당 학과의 최근 소식이 없습니다."
+    )

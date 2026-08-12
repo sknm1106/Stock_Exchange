@@ -50,12 +50,15 @@ LOGO_PATH = (
 # =========================================================
 query_params = st.query_params
 
-qr_param = (
-    query_params.get("qr")
-    or query_params.get("dept")
+# QR은 token을 가장 우선해서 판별
+qr_token = query_params.get("token")
+qr_value = query_params.get("qr")
+dept_value = (
+    query_params.get("dept")
     or query_params.get("department")
-    or query_params.get("token")
 )
+
+qr_param = qr_token or qr_value or dept_value
 
 mode_staff = query_params.get("mode") == "staff"
 
@@ -349,12 +352,30 @@ with col2:
                         if target_qr_key:
                             checkin_result = process_checkin(
                                 sid,
-                                target_qr_key
+                                qr_param
                             )
 
                             st.session_state["last_checkin_res"] = checkin_result
+
+                            if not checkin_result.get("success"):
+                                st.error(checkin_result.get("message", "QR 보상 처리에 실패했습니다."))
+                                st.stop()
+
+                            # 보상 지급 후 최신 사용자 정보 다시 로딩
+                            refreshed_user = fetch_one(
+                                "SELECT * FROM users WHERE student_id = ?",
+                                (sid,)
+                            )
+
+                            if refreshed_user:
+                                st.session_state["user"] = dict(refreshed_user)
+
                             if target_qr_info and target_qr_info.get("dept_id"):
                                 st.session_state["selected_dept_id"] = target_qr_info["dept_id"]
+
+                                # 사용자가 실제로 지급 여부를 알 수 있도록
+                                st.session_state["show_checkin_message"] = True
+
                                 st.switch_page("pages/3_Department.py")
                                 st.stop()
 
