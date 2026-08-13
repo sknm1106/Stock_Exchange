@@ -308,6 +308,7 @@ def apply_custom_theme():
         gap: 8px !important;
         row-gap: 6px !important;
         width: 100%;
+        margin-top: 10px !important;
     }
 
     .user-info-item {
@@ -360,7 +361,6 @@ def apply_custom_theme():
 def render_header():
     apply_custom_theme()
     
-    # Refresh user data from DB if logged in
     user = st.session_state.get('user')
     if user:
         refreshed_user = get_user(user['student_id'])
@@ -371,15 +371,12 @@ def render_header():
     now_str = get_korea_now_str()
     logo_path = "assets/konkuk_logo.png"
     
-    # Grid layout for Header
     col_title, col_user = st.columns([1.8, 2.2])
     
     with col_title:
         logo_col, text_col = st.columns([1, 4])
-
         with logo_col:
             render_logo_html(width=70)
-
         with text_col:
             st.markdown("""
             <h2 style="
@@ -392,7 +389,6 @@ def render_header():
             ">
                 KUSPI
             </h2>
-
             <div style="
                 font-size: 0.85rem;
                 color: #6B7280;
@@ -406,12 +402,6 @@ def render_header():
         if user:
             summary = get_user_portfolio_summary(user['student_id'])
 
-            # ID, 보유 코인, 총 자산을 한 줄(flex-wrap)로 배치.
-            # 로그아웃 버튼은 st.columns로 나란히 두지 않고 바로
-            # 아래 줄에 별도로 둔다. (nested st.columns를 쓰면 이
-            # Streamlit 버전에서는 좁은 화면일 때 컬럼이 각각
-            # 제멋대로 줄바꿈되면서 배지들과 겹쳐 보이는 문제가
-            # 있었기 때문에, 컬럼 배치에 기대지 않는 구조로 변경)
             st.markdown(f"""
             <div class="user-info-row">
                 <span class="user-info-item">👤 <b>{user['name']}</b><span class="user-info-id">({user['student_id']})</span></span>
@@ -422,6 +412,7 @@ def render_header():
 
             logout_spacer, logout_col = st.columns([3, 1])
             with logout_col:
+                st.markdown("<div style='padding-top: 8px;'></div>", unsafe_allow_html=True)
                 if st.button("로그아웃", key="header_logout_btn", use_container_width=True):
                     st.session_state.pop('user', None)
                     st.session_state['is_admin'] = False
