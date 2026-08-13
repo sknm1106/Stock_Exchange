@@ -37,10 +37,18 @@ def update_prices_now():
             # Mark schedule as applied
             cursor.execute("UPDATE price_schedule SET is_applied = 1 WHERE id = ?", (scheduled['id'],))
         else:
-            # 직전 가격 대비 -3% ~ +3% 랜덤 변동
-            change_percent = random.uniform(-3.0, 3.0)
+            # 직전 가격 대비 -5% ~ +6% 랜덤 변동 (변동폭 확대)
+            change_percent = random.uniform(-5.0, 6.0)
+
+            # 15% 확률로 급등/급락 이벤트 추가 (±8% 또는 +10%)
+            if random.random() < 0.15:
+                change_percent += random.choice([-8.0, 10.0])
+
             new_price = round(current_price * (1 + change_percent / 100.0), 1)
+            # 상하한선 유지 (50~90) — 상한이 없으면 이벤트가 길어질수록
+            # 특정 학과 가격이 무한정 튀어 오르는 문제가 생겨서 그대로는 적용하지 않음
             new_price = max(50.0, min(90.0, new_price))
+
         # Update current price in department table
         cursor.execute("UPDATE departments SET current_price = ? WHERE id = ?", (new_price, dept_id))
         

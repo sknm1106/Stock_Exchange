@@ -185,7 +185,6 @@ with col2:
                 ">
                     📍 [{event_name}] QR 스캔 완료!
                 </span>
-
                 <div style="
                     font-size: 0.85rem;
                     color: #4B5563;
@@ -198,7 +197,6 @@ with col2:
             """,
             unsafe_allow_html=True
         )
-
     elif qr_param:
         st.warning(
             "유효하지 않은 QR코드입니다. "

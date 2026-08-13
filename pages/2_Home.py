@@ -107,16 +107,16 @@ with col_right:
             impact_label = "🔥 호재" if impact == "BULLISH" else ("📉 악재" if impact == "BEARISH" else "ℹ️ 일반")
             dept_str = news['dept_name'] if news['dept_name'] else "전체 공과대학"
             
+            # 제목과 호재/악재 배지를 같은 줄에서 자연스럽게
+            # 줄바꿈되도록 인라인으로 배치
+            # (기존 좌우 flex 분리 방식은 모바일에서 제목이
+            #  여러 줄로 꺾일 때 배지가 세로로 겹쳐 깨져 보였음)
             st.markdown(f"""
             <div class="glass-card" style="padding: 14px 18px; margin-bottom: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <span style="background: #F3F4F6; font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; color: #4B5563; margin-right: 8px; font-weight: 600;">{dept_str}</span>
-                        <span style="font-weight: 700; color: #1F2937; font-size: 0.98rem;">{news['title']}</span>
-                    </div>
-                    <div>
-                        <span style="background: #FFFFFF; border: 1px solid {badge_color}; color: {badge_color}; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 600;">{impact_label}</span>
-                    </div>
+                <div>
+                    <span style="background: #F3F4F6; font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; color: #4B5563; margin-right: 6px; font-weight: 600; white-space: nowrap;">{dept_str}</span>
+                    <span style="font-weight: 700; color: #1F2937; font-size: 0.98rem;">{news['title']}</span>
+                    <span style="background: #FFFFFF; border: 1px solid {badge_color}; color: {badge_color}; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; white-space: nowrap; margin-left: 6px;">{impact_label}</span>
                 </div>
                 <div style="font-size: 0.85rem; color: #4B5563; margin-top: 6px; line-height: 1.4;">{news['content']}</div>
                 <div style="font-size: 0.72rem; color: #9CA3AF; margin-top: 6px; text-align: right;">🕒 {news['timestamp']}</div>
@@ -124,4 +124,3 @@ with col_right:
             """, unsafe_allow_html=True)
     else:
         st.info("등록된 공시 뉴스가 없습니다.")
-

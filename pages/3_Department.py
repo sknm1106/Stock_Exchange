@@ -488,12 +488,14 @@ if history:
         )
 
         # 모바일에서 차트가 지나치게 커지지 않게 제한
+        # (상단 여백을 늘려 "학과명 + 주가 추이" 제목이
+        #  플롯 툴바 아이콘과 겹쳐 글자가 깨지는 문제를 방지)
         fig.update_layout(
             height=300,
             margin=dict(
                 l=5,
                 r=5,
-                t=20,
+                t=48,
                 b=10,
             ),
         )
@@ -502,6 +504,10 @@ if history:
             fig,
             use_container_width=True,
             key=f"price_chart_{dept_id}",
+            config={
+                "displayModeBar": False,
+                "scrollZoom": False,
+            },
         )
 
     except Exception as e:

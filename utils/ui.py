@@ -295,6 +295,64 @@ def apply_custom_theme():
             margin-right: -4px;
         }
     }
+
+    /* ===============================
+    Header user-info row (ID / 보유 코인 / 총 자산)
+    한 줄에 깨지지 않게 배치
+    ================================ */
+    .user-info-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        row-gap: 6px;
+    }
+
+    .user-info-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        font-size: 0.85rem;
+        color: #4B5563;
+        font-weight: 600;
+    }
+
+    .user-info-item b {
+        color: #1F2937;
+    }
+
+    .user-info-item .user-info-id {
+        font-size: 0.72rem;
+        color: #9CA3AF;
+        font-weight: 500;
+    }
+
+    .user-info-row .coin-badge,
+    .user-info-row .asset-badge {
+        white-space: nowrap;
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        border-radius: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .user-info-row {
+            justify-content: flex-start;
+            gap: 6px;
+        }
+
+        .user-info-item {
+            font-size: 0.78rem;
+        }
+
+        .user-info-row .coin-badge,
+        .user-info-row .asset-badge {
+            padding: 3px 8px;
+            font-size: 0.72rem;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -346,30 +404,23 @@ def render_header():
     with col_user:
         if user:
             summary = get_user_portfolio_summary(user['student_id'])
-            
-            c1, c2, c3, c4 = st.columns([1.2, 1.3, 1.3, 0.8])
-            with c1:
+
+            # ID, 보유 코인, 총 자산을 한 줄(flex-wrap)로 배치
+            # (기존 4단 st.columns 방식은 모바일 좁은 화면에서
+            #  칸이 지나치게 좁아져 배지가 겹치거나 줄바꿈이 깨졌음)
+            col_info, col_btn = st.columns([4, 1])
+
+            with col_info:
                 st.markdown(f"""
-                <div style="text-align: right;">
-                    <div style="font-weight: 700; color: #1F2937; margin-top: 4px;">👤 {user['name']} <span style="font-size:0.75rem; color:#6B7280;">({user['student_id']})</span></div>
+                <div class="user-info-row">
+                    <span class="user-info-item">👤 <b>{user['name']}</b><span class="user-info-id">({user['student_id']})</span></span>
+                    <span class="user-info-item"><span class="coin-badge">🪙 {summary['coin']:,.1f} Coin</span></span>
+                    <span class="user-info-item"><span class="asset-badge">💼 {summary['total_asset']:,.1f} Coin</span></span>
                 </div>
                 """, unsafe_allow_html=True)
-            with c2:
-                st.markdown(f"""
-                <div style="text-align: right;">
-                    <div style="font-size: 0.75rem; color: #6B7280;">보유 코인</div>
-                    <div><span class="coin-badge">🪙 {summary['coin']:,.1f} Coin</span></div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c3:
-                st.markdown(f"""
-                <div style="text-align: right;">
-                    <div style="font-size: 0.75rem; color: #6B7280;">총 자산</div>
-                    <div><span class="asset-badge">💼 {summary['total_asset']:,.1f} Coin</span></div>
-                </div>
-                """, unsafe_allow_html=True)
-            with c4:
-                if st.button("로그아웃", key="header_logout_btn"):
+
+            with col_btn:
+                if st.button("로그아웃", key="header_logout_btn", use_container_width=True):
                     st.session_state.pop('user', None)
                     st.session_state['is_admin'] = False
                     st.rerun()
