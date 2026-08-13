@@ -77,12 +77,13 @@ with col_left:
             """, unsafe_allow_html=True)
         with c_d3:
             st.markdown(f"""
-            <div style="padding-top: 4px;">
+            <div style="padding-top: 4px; padding-bottom: 10px;">
                 <span style="font-weight: 700; font-size: 0.95rem; color: {change_color};">{change_symbol} {abs(dept['change']):.1f}</span>
                 {rate_badge}
             </div>
             """, unsafe_allow_html=True)
         with c_d4:
+            st.markdown("<div style='padding-top: 2px;'></div>", unsafe_allow_html=True)
             if st.button("📈 거래", key=f"btn_dept_left_{dept['id']}", use_container_width=True):
                 st.session_state['selected_dept_id'] = dept['id']
                 st.switch_page("pages/3_Department.py")

@@ -301,16 +301,17 @@ def apply_custom_theme():
     한 줄에 깨지지 않게 배치
     ================================ */
     .user-info-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 8px;
-        row-gap: 6px;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
+        row-gap: 6px !important;
+        width: 100%;
     }
 
     .user-info-item {
-        display: inline-flex;
+        display: inline-flex !important;
         align-items: center;
         gap: 4px;
         white-space: nowrap;
@@ -339,8 +340,8 @@ def apply_custom_theme():
 
     @media (max-width: 768px) {
         .user-info-row {
-            justify-content: flex-start;
-            gap: 6px;
+            justify-content: flex-start !important;
+            gap: 6px !important;
         }
 
         .user-info-item {
@@ -405,21 +406,22 @@ def render_header():
         if user:
             summary = get_user_portfolio_summary(user['student_id'])
 
-            # ID, 보유 코인, 총 자산을 한 줄(flex-wrap)로 배치
-            # (기존 4단 st.columns 방식은 모바일 좁은 화면에서
-            #  칸이 지나치게 좁아져 배지가 겹치거나 줄바꿈이 깨졌음)
-            col_info, col_btn = st.columns([4, 1])
+            # ID, 보유 코인, 총 자산을 한 줄(flex-wrap)로 배치.
+            # 로그아웃 버튼은 st.columns로 나란히 두지 않고 바로
+            # 아래 줄에 별도로 둔다. (nested st.columns를 쓰면 이
+            # Streamlit 버전에서는 좁은 화면일 때 컬럼이 각각
+            # 제멋대로 줄바꿈되면서 배지들과 겹쳐 보이는 문제가
+            # 있었기 때문에, 컬럼 배치에 기대지 않는 구조로 변경)
+            st.markdown(f"""
+            <div class="user-info-row">
+                <span class="user-info-item">👤 <b>{user['name']}</b><span class="user-info-id">({user['student_id']})</span></span>
+                <span class="user-info-item"><span class="coin-badge">🪙 {summary['coin']:,.1f} Coin</span></span>
+                <span class="user-info-item"><span class="asset-badge">💼 {summary['total_asset']:,.1f} Coin</span></span>
+            </div>
+            """, unsafe_allow_html=True)
 
-            with col_info:
-                st.markdown(f"""
-                <div class="user-info-row">
-                    <span class="user-info-item">👤 <b>{user['name']}</b><span class="user-info-id">({user['student_id']})</span></span>
-                    <span class="user-info-item"><span class="coin-badge">🪙 {summary['coin']:,.1f} Coin</span></span>
-                    <span class="user-info-item"><span class="asset-badge">💼 {summary['total_asset']:,.1f} Coin</span></span>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with col_btn:
+            logout_spacer, logout_col = st.columns([3, 1])
+            with logout_col:
                 if st.button("로그아웃", key="header_logout_btn", use_container_width=True):
                     st.session_state.pop('user', None)
                     st.session_state['is_admin'] = False
