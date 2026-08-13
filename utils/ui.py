@@ -20,7 +20,7 @@ def render_logo_html(width: int = 70) -> None:
     logo_base64 = base64.b64encode(LOGO_PATH.read_bytes()).decode("utf-8")
     st.markdown(
         f"""
-        <div style="display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:center;margin-top:45px;margin-bottom:8px;">
             <img src="data:image/png;base64,{logo_base64}" alt="Konkuk logo" style="display:block;width:{width}px;height:auto;">
         </div>
         """,
@@ -234,10 +234,44 @@ def apply_custom_theme():
         color: #4B5563;
         font-weight: 600;
     }
+    .user-info-row {
+        display: block !important;
+    }
 
+    .user-name-row {
+        width: 100%;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #1F2937;
+        margin-bottom: 10px;
+        text-align: right;
+    }
+
+    .user-name-row .user-info-id {
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: #9CA3AF;
+        margin-left: 4px;
+    }
+
+    .user-asset-row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+    }
 
     /* Smartphone */
     @media (max-width: 768px) {
+        .user-name-row {
+            text-align: left;
+            font-size: 1.2rem;
+        }
+
+        .user-asset-row {
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
 
         .block-container {
             padding-left: 14px !important;
@@ -404,9 +438,20 @@ def render_header():
 
             st.markdown(f"""
             <div class="user-info-row">
-                <span class="user-info-item">👤 <b>{user['name']}</b><span class="user-info-id">({user['student_id']})</span></span>
-                <span class="user-info-item"><span class="user-info-label">보유 코인</span><span class="coin-badge">🪙 {summary['coin']:,.1f} Coin</span></span>
-                <span class="user-info-item"><span class="user-info-label">총 자산</span><span class="asset-badge">💼 {summary['total_asset']:,.1f} Coin</span></span>
+                <div class="user-name-row">
+                    👤 <b>{user['name']}</b>
+                    <span class="user-info-id">({user['student_id']})</span>
+                </div>
+                <div class="user-asset-row">
+                    <span class="user-info-item">
+                        <span class="user-info-label">보유 코인</span>
+                        <span class="coin-badge">🪙 {summary['coin']:,.1f} Coin</span>
+                    </span>
+                    <span class="user-info-item">
+                        <span class="user-info-label">총 자산</span>
+                        <span class="asset-badge">💼 {summary['total_asset']:,.1f} Coin</span>
+                    </span>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
