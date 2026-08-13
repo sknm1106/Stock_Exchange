@@ -60,7 +60,20 @@ dept_value = (
 
 qr_param = qr_token or qr_value or dept_value
 
-mode_staff = query_params.get("mode") == "staff"
+# -----------------------------------------------------
+# st.switch_page() 로 이 페이지에 도달하면 URL의 쿼리
+# 파라미터(?qr=...)가 유실되는 경우가 있다(새로고침 시
+# 주소창에서 사라지는 것과 동일 현상). 이 경우 app.py에서
+# 미리 저장해둔 st.session_state["pending_qr"] 값을
+# 대신 사용해서 코인 지급이 끊기지 않도록 한다.
+# -----------------------------------------------------
+if not qr_param:
+    qr_param = st.session_state.get("pending_qr")
+
+mode_staff = (
+    query_params.get("mode") == "staff"
+    or st.session_state.get("pending_mode_staff", False)
+)
 
 
 # =========================================================
@@ -230,7 +243,7 @@ with col2:
                     font-size: 1.15rem;
                     font-weight: 800;
                     color: #1F2937;
-                ">에어팟 4 ANC 모델</div>
+                ">추후 공개 예정</div>
             </div>
         </div>""",
         unsafe_allow_html=True
@@ -356,6 +369,12 @@ with col2:
                             )
 
                             st.session_state["last_checkin_res"] = checkin_result
+
+                            # 처리 완료: pending_qr 은 더 이상 필요 없으므로 정리
+                            # (다음 사람이 같은 브라우저를 새로고침해도
+                            #  잘못된 값으로 재처리되지 않도록)
+                            st.session_state.pop("pending_qr", None)
+                            st.session_state.pop("pending_mode_staff", None)
 
                             if not checkin_result.get("success"):
                                 st.error(checkin_result.get("message", "QR 보상 처리에 실패했습니다."))
