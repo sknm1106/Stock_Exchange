@@ -405,8 +405,8 @@ def render_header():
             st.markdown(f"""
             <div class="user-info-row">
                 <span class="user-info-item">👤 <b>{user['name']}</b><span class="user-info-id">({user['student_id']})</span></span>
-                <span class="user-info-item"><span class="coin-badge">🪙 {summary['coin']:,.1f} Coin</span></span>
-                <span class="user-info-item"><span class="asset-badge">💼 {summary['total_asset']:,.1f} Coin</span></span>
+                <span class="user-info-item"><span class="user-info-label">보유 코인</span><span class="coin-badge">🪙 {summary['coin']:,.1f} Coin</span></span>
+                <span class="user-info-item"><span class="user-info-label">총 자산</span><span class="asset-badge">💼 {summary['total_asset']:,.1f} Coin</span></span>
             </div>
             """, unsafe_allow_html=True)
 
