@@ -28,7 +28,7 @@ apply_custom_theme()
 # Strict Admin Authorization Check
 if not st.session_state.get("is_admin", False):
     st.error("🔒 관리자만 접근할 수 있는 페이지입니다.")
-    st.info("로그인 화면에서 학번: `admin777`, 이름: `admin777` 로 로그인 후 이용해주세요.")
+    st.info("로그인 화면에서 관리자 계정으로 로그인 후 이용해주세요.")
     col_nav1, _ = st.columns([1, 4])
     with col_nav1:
         if st.button("👉 로그인 화면으로 이동", type="primary"):
@@ -44,7 +44,7 @@ st.markdown("""
     </div>
     <div>
         <span style="background: #00703E; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;">
-            🟢 관리자 권한 활성화됨 (admin777)
+            🟢 관리자 권한 활성화됨
         </span>
     </div>
 </div>
@@ -85,7 +85,7 @@ depts = get_departments_list()
 with tab_overview:
     st.markdown("<h4 style='color:#00703E;'>📊 KUSPI 행사이벤트 실시간 종합 현황</h4>", unsafe_allow_html=True)
     
-    total_students = len([u for u in all_users if u['student_id'] != 'admin777'])
+    total_students = len([u for u in all_users if u['student_id'] != 'admin1463'])
     total_checkins = len(checkin_logs)
     total_granted_coins = sum(c['reward_coin'] for c in checkin_logs)
     total_tx_count = len(all_txs)
@@ -138,7 +138,7 @@ with tab_users:
     
     user_asset_list = []
     for u in all_users:
-        if u['student_id'] == 'admin777':
+        if u['student_id'] == 'admin1463':
             continue
         sid = u['student_id']
         name = u['name']
@@ -343,7 +343,7 @@ with tab_qr:
     st.markdown("""
     <div style="background: #F7F9F8; border: 1px solid #E5E7EB; padding: 14px; border-radius: 10px; margin-bottom: 20px;">
         <b>🔑 관리자 접속 주소:</b> <code>https://stockexchange-lwgrxbag7yjrayj8w8pwqj.streamlit.app/?mode=staff</code><br>
-        <span style="font-size:0.85rem; color:#6B7280;">관리자 페이지는 일반 사이드바에 노출되지 않으며 학번 <code>admin777</code> / 이름 <code>admin777</code> 인증이 필요합니다.</span>
+        <span style="font-size:0.85rem; color:#6B7280;">관리자 페이지는 일반 사이드바에 노출되지 않으며 학번 <code>admin1463</code> / 이름 <code>admin1463</code> 인증이 필요합니다.</span>
     </div>
     """, unsafe_allow_html=True)
     
@@ -382,7 +382,112 @@ with tab_qr:
 # ---------------------------------------------------------
 with tab_system:
     st.markdown("<h4 style='color:#00703E;'>📰 공시 뉴스 게시 & DB 시스템 초기화</h4>", unsafe_allow_html=True)
-    
+    st.markdown("##### 💰 현재 서버 DB 자산 현황")
+
+    live_asset_rows = []
+
+    for u in all_users:
+        if u["student_id"] == "admin777":
+            continue
+
+        summary = get_user_portfolio_summary(u["student_id"])
+
+        live_asset_rows.append({
+            "학번": u["student_id"],
+            "이름": u["name"],
+            "보유 코인": summary["coin"],
+            "주식 평가액": summary["stock_eval"],
+            "총 보유 자산": summary["total_asset"],
+            "첫 접속일": u["created_at"],
+        })
+
+    if live_asset_rows:
+        df_live_assets = pd.DataFrame(live_asset_rows)
+        df_live_assets = df_live_assets.sort_values(
+            by="총 보유 자산",
+            ascending=False
+        ).reset_index(drop=True)
+
+        df_live_assets.insert(
+            0,
+            "순위",
+            range(1, len(df_live_assets) + 1)
+        )
+
+        total_coin = df_live_assets["보유 코인"].sum()
+        total_stock = df_live_assets["주식 평가액"].sum()
+        total_assets = df_live_assets["총 보유 자산"].sum()
+
+        c1, c2, c3 = st.columns(3)
+
+        with c1:
+            st.metric("전체 학생 보유 코인", f"{total_coin:,.0f}")
+
+        with c2:
+            st.metric("전체 주식 평가액", f"{total_stock:,.0f}")
+
+        with c3:
+            st.metric("전체 총 보유 자산", f"{total_assets:,.0f}")
+
+        st.dataframe(
+            df_live_assets,
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.info("등록된 학생이 없습니다.")
+
+
+    st.markdown("##### 💾 현재 서버 DB 백업")
+
+    st.caption(
+        "현재 Streamlit Cloud 서버가 사용 중인 SQLite DB를 "
+        "안전한 스냅샷으로 다운로드합니다."
+    )
+
+    if st.button(
+        "📦 현재 서버 DB 백업 생성",
+        key="btn_create_live_db_backup"
+    ):
+        try:
+            source_conn = sqlite3.connect(DB_PATH)
+
+            temp_file = tempfile.NamedTemporaryFile(
+                suffix=".db",
+                delete=False
+            )
+            temp_file.close()
+
+            backup_conn = sqlite3.connect(temp_file.name)
+
+            source_conn.backup(backup_conn)
+
+            backup_conn.close()
+            source_conn.close()
+
+            with open(temp_file.name, "rb") as f:
+                backup_bytes = f.read()
+
+            st.session_state["live_db_backup"] = backup_bytes
+
+            st.success(
+                "✅ 현재 서버 DB의 백업 스냅샷을 생성했습니다."
+            )
+
+        except Exception as e:
+            st.error(f"DB 백업 생성 실패: {e}")
+
+    if "live_db_backup" in st.session_state:
+
+        st.download_button(
+            label="⬇️ 서버 DB 다운로드",
+            data=st.session_state["live_db_backup"],
+            file_name="engineering_stock_live_backup.db",
+            mime="application/octet-stream",
+            key="btn_download_live_db_backup"
+        )
+
+
     st.markdown("##### 1. 공과대학 호재 / 악재 뉴스 게시")
     with st.form("admin_add_news_form"):
         dept_news_opts = {"[전체 공과대학 공통]": None}
@@ -409,25 +514,146 @@ with tab_system:
                 st.success("✅ 공시 뉴스가 성공적으로 등록되었습니다.")
                 st.rerun()
 
+    # ---------------------------------------------------------
+    # 뉴스 삭제
+    # ---------------------------------------------------------
+    st.markdown("##### 2. 🗑️ 공과대학 뉴스 / 공시 삭제")
+
+    news_list = fetch_all("""
+        SELECT
+            n.id,
+            n.department_id,
+            n.title,
+            n.content,
+            n.impact,
+            n.timestamp,
+            d.name AS department_name
+        FROM news n
+        LEFT JOIN departments d ON n.department_id = d.id
+        ORDER BY n.timestamp DESC, n.id DESC
+    """)
+
+    if news_list:
+        news_options = {}
+
+        for news in news_list:
+            dept_name = news["department_name"] or "전체 공과대학"
+
+            impact_label = {
+                "BULLISH": "🔥 호재",
+                "BEARISH": "📉 악재",
+                "NEUTRAL": "📢 일반"
+            }.get(news["impact"], news["impact"])
+
+            label = (
+                f"[{news['id']}] "
+                f"{dept_name} | "
+                f"{news['title']} | "
+                f"{impact_label} | "
+                f"{news['timestamp']}"
+            )
+
+            news_options[label] = news
+
+        selected_news_label = st.selectbox(
+            "삭제할 뉴스 선택",
+            list(news_options.keys()),
+            key="admin_delete_news_select"
+        )
+
+        selected_news = news_options[selected_news_label]
+
+        # 선택한 뉴스 미리보기
+        st.markdown(
+            f"""
+            **학과:** {selected_news['department_name'] or '전체 공과대학'}  
+            **제목:** {selected_news['title']}  
+            **내용:** {selected_news['content']}  
+            **게시일:** {selected_news['timestamp']}
+            """
+        )
+
+        delete_confirm = st.checkbox(
+            "선택한 뉴스를 삭제하겠습니다.",
+            key="admin_delete_news_confirm"
+        )
+
+        if st.button(
+            "🗑️ 선택 뉴스 삭제",
+            type="secondary",
+            key="btn_delete_news"
+        ):
+            if not delete_confirm:
+                st.warning("삭제 확인란을 먼저 체크해주세요.")
+            else:
+                execute_query(
+                    "DELETE FROM news WHERE id = ?",
+                    (selected_news["id"],)
+                )
+
+                st.success(
+                    f"✅ '{selected_news['title']}' 뉴스가 삭제되었습니다."
+                )
+                st.rerun()
+
+    else:
+        st.info("현재 등록된 뉴스가 없습니다.")
+
+    
     st.markdown("<hr style='border:0; height:1px; background:#E5E7EB; margin: 30px 0;'>", unsafe_allow_html=True)
 
-    st.markdown("##### 2. ⚠️ 시스템 데이터베이스 전체 초기화")
-    st.warning("주의: 전체 초기화 실행 시 모든 사용자 계정, 부스 참여 기록, 거래 내역이 초기 상태로 리셋됩니다.")
-    
-    reset_confirm = st.text_input("초기화를 진행하려면 'RESET'을 입력하세요", key="admin_reset_confirm_input")
-    if st.button("🔥 전체 DB 초기화 및 재설정", type="primary", key="btn_full_db_reset"):
+    st.markdown("##### 3. 🧹 행사 사용자 데이터 초기화")
+
+    st.warning(
+        "학생 계정, 보유주식, 거래내역, QR 참여기록만 삭제됩니다. "
+        "학과 정보, 현재 주가, 가격 변동 이력, 가격 스케줄, 뉴스는 그대로 유지됩니다."
+    )
+
+    reset_confirm = st.text_input(
+        "사용자 데이터를 초기화하려면 'RESET'을 입력하세요",
+        key="admin_reset_confirm_input"
+    )
+
+    if st.button(
+        "🧹 사용자 데이터만 초기화",
+        type="primary",
+        key="btn_user_data_reset"
+    ):
         if reset_confirm.strip() == "RESET":
+
             from database.db import get_db_connection
+
             conn = get_db_connection()
             cur = conn.cursor()
-            tables = ['users', 'departments', 'department_checkins', 'qr_checkins', 'holdings', 'transactions', 'price_history', 'price_schedule', 'news']
-            for t in tables:
-                cur.execute(f"DROP TABLE IF EXISTS {t}")
-            conn.commit()
-            conn.close()
-            
-            seed_db()
-            st.success("🎉 데이터베이스가 초기화되고 디폴트 시드 데이터로 재구성되었습니다.")
-            st.rerun()
+
+            try:
+                # 사용자와 연결된 기록부터 삭제
+                cur.execute("DELETE FROM department_checkins")
+                cur.execute("DELETE FROM qr_checkins")
+                cur.execute("DELETE FROM holdings")
+                cur.execute("DELETE FROM transactions")
+
+                # 관리자 계정은 유지하고 일반 사용자만 삭제
+                cur.execute(
+                    "DELETE FROM users WHERE student_id != ?",
+                    ("admin1463",)
+                )
+
+                conn.commit()
+
+                st.success(
+                    "✅ 사용자 데이터가 초기화되었습니다. "
+                    "학과 정보, 주가, 가격 변동 기록, 스케줄, 뉴스는 유지됩니다."
+                )
+
+                st.rerun()
+
+            except Exception as e:
+                conn.rollback()
+                st.error(f"사용자 데이터 초기화 실패: {e}")
+
+            finally:
+                conn.close()
+
         else:
             st.error("'RESET' 문구를 정확히 입력해주세요.")

@@ -5,6 +5,10 @@ __pycache__/
 # Local DB backups
 *_backup.db
 *_before_reset.db
+*_backup*.db
+
+# macOS
+.DS_Store
 
 fix.md
 fix2.md

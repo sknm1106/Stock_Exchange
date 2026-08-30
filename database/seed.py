@@ -119,7 +119,7 @@ def seed_db():
     if cursor.fetchone()[0] == 0:
         cursor.execute(
             "INSERT INTO users (student_id, name, coin) VALUES (?, ?, ?)",
-            ("admin777", "admin777", 0.0)
+            ("admin1463", "admin1463", 0.0)
         )
         cursor.execute(
             "INSERT INTO users (student_id, name, coin) VALUES (?, ?, ?)",

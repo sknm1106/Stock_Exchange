@@ -210,7 +210,7 @@ with col2:
         )
 
     # =====================================================
-    # 상품 안내 (에어팟 4 ANC 모델 1개만 표시)
+    # 상품 안내
     # =====================================================
     st.markdown(
         """<div style="
@@ -241,7 +241,7 @@ with col2:
                     font-size: 1.15rem;
                     font-weight: 800;
                     color: #1F2937;
-                ">추후 공개 예정</div>
+                ">배민 5만원권</div>
             </div>
         </div>""",
         unsafe_allow_html=True
@@ -328,8 +328,8 @@ with col2:
                     # 관리자 로그인
                     # -------------------------------------
                     if (
-                        sid == "admin777"
-                        and name == "admin777"
+                        sid == "admin1463"
+                        and name == "admin1463"
                     ):
                         user_data, _ = login_user(
                             sid,
