@@ -1,15 +1,101 @@
-import sqlite3
 import os
+import sqlite3
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "engineering_stock.db")
+try:
+    import psycopg2
+    import psycopg2.extras
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "engineering_stock.db")
+SCHEMA_PG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_supabase.sql")
+
+def get_database_url():
+    """
+    Supabase PostgreSQL DATABASE_URL을 탐색합니다.
+    1. Streamlit Secrets (st.secrets["DATABASE_URL"])
+    2. OS Environment Variable (os.environ["DATABASE_URL"])
+    3. Local .streamlit/secrets.toml file directly
+    """
+    # 1. Streamlit Secrets
+    try:
+        import streamlit as st
+        if "DATABASE_URL" in st.secrets:
+            return st.secrets["DATABASE_URL"]
+    except Exception:
+        pass
+
+    # 2. OS Environment Variable
+    if "DATABASE_URL" in os.environ:
+        return os.environ["DATABASE_URL"]
+
+    # 3. Direct parse of .streamlit/secrets.toml
+    secrets_file = os.path.join(BASE_DIR, ".streamlit", "secrets.toml")
+    if os.path.exists(secrets_file):
+        try:
+            import toml
+            data = toml.load(secrets_file)
+            if "DATABASE_URL" in data:
+                return data["DATABASE_URL"]
+        except Exception:
+            pass
+
+    return None
+
+def is_postgres():
+    """현재 환경에서 PostgreSQL (Supabase)을 사용하는지 여부"""
+    return bool(PSYCOPG2_AVAILABLE and get_database_url())
 
 def get_db_connection():
+    """
+    데이터베이스 연결 객체를 반환합니다.
+    - DATABASE_URL이 존재하고 psycopg2가 있으면 Supabase (PostgreSQL)에 연결
+    - 그 외의 경우 로컬 SQLite에 연결
+    """
+    db_url = get_database_url()
+    if PSYCOPG2_AVAILABLE and db_url:
+        try:
+            conn = psycopg2.connect(
+                db_url,
+                connect_timeout=10,
+                sslmode="require"
+            )
+            return conn
+        except Exception as e:
+            print(f"⚠️ Supabase PostgreSQL 연결 실패, SQLite로 fallback: {e}")
+            pass
+
+    # Fallback to SQLite
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
+    """데이터베이스 스키마를 초기화합니다."""
     conn = get_db_connection()
+    
+    # PostgreSQL 연결인 경우
+    if PSYCOPG2_AVAILABLE and hasattr(conn, "closed") and type(conn).__module__.startswith("psycopg2"):
+        try:
+            cursor = conn.cursor()
+            if os.path.exists(SCHEMA_PG_PATH):
+                with open(SCHEMA_PG_PATH, "r", encoding="utf-8") as f:
+                    schema_sql = f.read()
+                cursor.execute(schema_sql)
+                conn.commit()
+                print("✅ Supabase PostgreSQL schema initialized.")
+            cursor.close()
+        except Exception as e:
+            conn.rollback()
+            print(f"❌ PostgreSQL schema init error: {e}")
+            raise
+        finally:
+            conn.close()
+        return
+
+    # SQLite 연결인 경우
     cursor = conn.cursor()
     
     # 1. users
@@ -34,13 +120,12 @@ def init_db():
     )
     """)
     
-    # Check if qr_token column exists in existing database
     cursor.execute("PRAGMA table_info(departments)")
     columns = [col[1] for col in cursor.fetchall()]
     if 'qr_token' not in columns:
         cursor.execute("ALTER TABLE departments ADD COLUMN qr_token TEXT")
 
-    # 3. department_checkins & qr_checkins (14 QR support)
+    # 3. department_checkins & qr_checkins
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS department_checkins (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -135,3 +220,4 @@ def init_db():
     
     conn.commit()
     conn.close()
+

@@ -12,3 +12,6 @@ __pycache__/
 
 fix.md
 fix2.md
+
+.streamlit/secrets.toml__pycache__/
+*.pyc

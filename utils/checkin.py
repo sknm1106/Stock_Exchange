@@ -196,7 +196,7 @@ def process_checkin(student_id: str, qr_identifier: str):
             )
         )
 
-    except sqlite3.IntegrityError:
+    except Exception:
 
         # 동시에 두 번 요청된 경우에도 중복 지급 방지
         refreshed_user = fetch_one(

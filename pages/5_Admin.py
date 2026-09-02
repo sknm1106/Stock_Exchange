@@ -442,54 +442,57 @@ with tab_system:
         st.info("등록된 학생이 없습니다.")
 
 
-    st.markdown("##### 💾 현재 서버 DB 백업")
+    st.markdown("##### 💾 데이터베이스 백업 및 연동 상태")
 
-    st.caption(
-        "현재 Streamlit Cloud 서버가 사용 중인 SQLite DB를 "
-        "안전한 스냅샷으로 다운로드합니다."
-    )
-
-    if st.button(
-        "📦 현재 서버 DB 백업 생성",
-        key="btn_create_live_db_backup"
-    ):
-        try:
-            source_conn = sqlite3.connect(DB_PATH)
-
-            temp_file = tempfile.NamedTemporaryFile(
-                suffix=".db",
-                delete=False
-            )
-            temp_file.close()
-
-            backup_conn = sqlite3.connect(temp_file.name)
-
-            source_conn.backup(backup_conn)
-
-            backup_conn.close()
-            source_conn.close()
-
-            with open(temp_file.name, "rb") as f:
-                backup_bytes = f.read()
-
-            st.session_state["live_db_backup"] = backup_bytes
-
-            st.success(
-                "✅ 현재 서버 DB의 백업 스냅샷을 생성했습니다."
-            )
-
-        except Exception as e:
-            st.error(f"DB 백업 생성 실패: {e}")
-
-    if "live_db_backup" in st.session_state:
-
-        st.download_button(
-            label="⬇️ 서버 DB 다운로드",
-            data=st.session_state["live_db_backup"],
-            file_name="engineering_stock_live_backup.db",
-            mime="application/octet-stream",
-            key="btn_download_live_db_backup"
+    from database.db import is_postgres
+    if is_postgres():
+        st.success("☁️ **Supabase PostgreSQL 클라우드 DB 연동 중**: 서버 재시작이나 배포 시에도 모든 데이터가 클라우드에 안전하게 영구 보존됩니다.")
+    else:
+        st.caption(
+            "현재 SQLite 로컬 DB를 사용 중입니다. 안전한 스냅샷으로 다운로드합니다."
         )
+
+        if st.button(
+            "📦 로컬 DB 백업 생성",
+            key="btn_create_live_db_backup"
+        ):
+            try:
+                source_conn = sqlite3.connect(DB_PATH)
+
+                temp_file = tempfile.NamedTemporaryFile(
+                    suffix=".db",
+                    delete=False
+                )
+                temp_file.close()
+
+                backup_conn = sqlite3.connect(temp_file.name)
+
+                source_conn.backup(backup_conn)
+
+                backup_conn.close()
+                source_conn.close()
+
+                with open(temp_file.name, "rb") as f:
+                    backup_bytes = f.read()
+
+                st.session_state["live_db_backup"] = backup_bytes
+
+                st.success(
+                    "✅ 로컬 DB의 백업 스냅샷을 생성했습니다."
+                )
+
+            except Exception as e:
+                st.error(f"DB 백업 생성 실패: {e}")
+
+        if "live_db_backup" in st.session_state:
+
+            st.download_button(
+                label="⬇️ 서버 DB 다운로드",
+                data=st.session_state["live_db_backup"],
+                file_name="engineering_stock_live_backup.db",
+                mime="application/octet-stream",
+                key="btn_download_live_db_backup"
+            )
 
 
     st.markdown("##### 1. 공과대학 호재 / 악재 뉴스 게시")
@@ -624,26 +627,18 @@ with tab_system:
         key="btn_user_data_reset"
     ):
         if reset_confirm.strip() == "RESET":
-
-            from database.db import get_db_connection
-
-            conn = get_db_connection()
-            cur = conn.cursor()
-
             try:
                 # 사용자와 연결된 기록부터 삭제
-                cur.execute("DELETE FROM department_checkins")
-                cur.execute("DELETE FROM qr_checkins")
-                cur.execute("DELETE FROM holdings")
-                cur.execute("DELETE FROM transactions")
+                execute_query("DELETE FROM department_checkins")
+                execute_query("DELETE FROM qr_checkins")
+                execute_query("DELETE FROM holdings")
+                execute_query("DELETE FROM transactions")
 
                 # 관리자 계정은 유지하고 일반 사용자만 삭제
-                cur.execute(
+                execute_query(
                     "DELETE FROM users WHERE student_id != ?",
                     ("admin1463",)
                 )
-
-                conn.commit()
 
                 st.success(
                     "✅ 사용자 데이터가 초기화되었습니다. "
@@ -653,11 +648,7 @@ with tab_system:
                 st.rerun()
 
             except Exception as e:
-                conn.rollback()
                 st.error(f"사용자 데이터 초기화 실패: {e}")
-
-            finally:
-                conn.close()
 
         else:
             st.error("'RESET' 문구를 정확히 입력해주세요.")

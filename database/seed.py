@@ -7,50 +7,43 @@ if BASE_DIR not in sys.path:
 
 import pandas as pd
 from datetime import datetime, timedelta
-from database.db import get_db_connection, init_db
+from database.db import init_db
+from utils.database import fetch_all, fetch_one, execute_query
 from utils.date_utils import get_korea_now_str
 
 DEPTS_CSV = os.path.join(BASE_DIR, "data", "departments.csv")
-# PRICES_CSV = os.path.join(BASE_DIR, "data", "prices.csv")
 
 def seed_db():
     init_db()
-    conn = get_db_connection()
-    cursor = conn.cursor()
     
     # 1. Seed departments if count != 9
-    cursor.execute("SELECT COUNT(*) FROM departments")
-    dept_count = cursor.fetchone()[0]
+    dept_count_row = fetch_one("SELECT COUNT(*) FROM departments")
+    dept_count = dept_count_row[0] if dept_count_row else 0
     
     if dept_count != 9 and os.path.exists(DEPTS_CSV):
-        cursor.execute("DELETE FROM departments")
-        cursor.execute("DELETE FROM price_history")
-        cursor.execute("DELETE FROM news")
-        conn.commit()
+        execute_query("DELETE FROM news")
+        execute_query("DELETE FROM price_history")
+        execute_query("DELETE FROM departments")
         
         df_depts = pd.read_csv(DEPTS_CSV)
         for _, row in df_depts.iterrows():
             dept_id = int(row['id'])
             code = str(row['code']).lower()
             qr_token = f"dept_{dept_id}_token_{code}_2026"
-            cursor.execute(
+            execute_query(
                 "INSERT INTO departments (id, name, code, description, current_price, qr_token) VALUES (?, ?, ?, ?, ?, ?)",
                 (dept_id, row['name'], row['code'], row['description'], float(row['base_price']), qr_token)
             )
-        conn.commit()
         print("✅ 9 Departments seeded successfully with QR tokens.")
     else:
         # Ensure qr_tokens exist for departments if missing
-        cursor.execute("SELECT id, code, qr_token FROM departments")
-        dept_rows = cursor.fetchall()
+        dept_rows = fetch_all("SELECT id, code, qr_token FROM departments")
         for d in dept_rows:
             if not d['qr_token']:
                 qr_token = f"dept_{d['id']}_token_{str(d['code']).lower()}_2026"
-                cursor.execute("UPDATE departments SET qr_token = ? WHERE id = ?", (qr_token, d['id']))
-        conn.commit()
+                execute_query("UPDATE departments SET qr_token = ? WHERE id = ?", (qr_token, d['id']))
 
     # 2. Seed initial price_history if empty
-    # DB 최초 생성 시 9개 학과의 시작 가격을 60~80 Coin 범위로 설정
     INITIAL_PRICES = {
         1: 65.0,  # 사회환경공학부
         2: 74.0,  # 기계·로봇·자동차공학부
@@ -63,27 +56,25 @@ def seed_db():
         9: 74.0,  # 산업공학과
     }
 
-    cursor.execute("SELECT COUNT(*) FROM price_history")
-    price_count = cursor.fetchone()[0]
+    price_count_row = fetch_one("SELECT COUNT(*) FROM price_history")
+    price_count = price_count_row[0] if price_count_row else 0
 
     if price_count == 0:
         now_time = get_korea_now_str()
-
-        cursor.execute("SELECT id FROM departments ORDER BY id ASC")
-        dept_rows = cursor.fetchall()
+        dept_rows = fetch_all("SELECT id FROM departments ORDER BY id ASC")
 
         for dept in dept_rows:
             dept_id = int(dept["id"])
             initial_price = INITIAL_PRICES.get(dept_id, 70.0)
 
             # departments 현재가와 차트 시작 가격을 반드시 동일하게 맞춤
-            cursor.execute(
+            execute_query(
                 "UPDATE departments SET current_price = ? WHERE id = ?",
                 (initial_price, dept_id)
             )
 
             # 학과별 시작 가격은 딱 1건만 기록
-            cursor.execute(
+            execute_query(
                 """
                 INSERT INTO price_history
                     (department_id, price, timestamp)
@@ -92,12 +83,11 @@ def seed_db():
                 (dept_id, initial_price, now_time)
             )
 
-        conn.commit()
         print("✅ Initial prices seeded: 9 departments / 60~80 Coin")
     
     # 3. Seed news if empty
-    cursor.execute("SELECT COUNT(*) FROM news")
-    news_count = cursor.fetchone()[0]
+    news_count_row = fetch_one("SELECT COUNT(*) FROM news")
+    news_count = news_count_row[0] if news_count_row else 0
     if news_count == 0:
         sample_news = [
             (5, "🚀 컴퓨터공학부, 생성형 AI 해커톤 전국 1위 달성!", "학생들이 자체 개발한 LLM 모델이 최고상을 받으며 주가가 급등세를 타고 있습니다.", "BULLISH", "2026-08-11 09:30:00"),
@@ -107,28 +97,25 @@ def seed_db():
             (4, "🧪 화공·생명·에너지공학부, 차세대 2차전지 전고체 배터리 핵심 원천기술 확보", "친환경 에너지를 이끌 핵심 기술 발표로 기대감이 증폭되었습니다.", "BULLISH", "2026-08-11 12:30:00")
         ]
         for dept_id, title, content, impact, ts in sample_news:
-            cursor.execute(
+            execute_query(
                 "INSERT INTO news (department_id, title, content, impact, timestamp) VALUES (?, ?, ?, ?, ?)",
                 (dept_id, title, content, impact, ts)
             )
-        conn.commit()
         print("✅ Campus news seeded successfully.")
 
     # 4. Seed demo admin and demo user if empty
-    cursor.execute("SELECT COUNT(*) FROM users")
-    if cursor.fetchone()[0] == 0:
-        cursor.execute(
+    users_count_row = fetch_one("SELECT COUNT(*) FROM users")
+    if users_count_row and users_count_row[0] == 0:
+        execute_query(
             "INSERT INTO users (student_id, name, coin) VALUES (?, ?, ?)",
             ("admin1463", "admin1463", 0.0)
         )
-        cursor.execute(
+        execute_query(
             "INSERT INTO users (student_id, name, coin) VALUES (?, ?, ?)",
             ("202412345", "홍길동", 0.0)
         )
-        conn.commit()
         print("✅ Initial users created.")
-        
-    conn.close()
 
 if __name__ == "__main__":
     seed_db()
+
