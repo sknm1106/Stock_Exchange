@@ -1,5 +1,7 @@
 import os
 import sys
+import sqlite3
+import tempfile
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
