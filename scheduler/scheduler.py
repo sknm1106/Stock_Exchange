@@ -47,7 +47,7 @@ def update_prices_now():
             new_price = round(current_price * (1 + change_percent / 100.0), 1)
             # 상하한선 유지 (50~90) — 상한이 없으면 이벤트가 길어질수록
             # 특정 학과 가격이 무한정 튀어 오르는 문제가 생겨서 그대로는 적용하지 않음
-            new_price = max(50.0, min(90.0, new_price))
+            new_price = max(50.0, min(99.0, new_price))
 
         # Update current price in department table
         cursor.execute("UPDATE departments SET current_price = ? WHERE id = ?", (new_price, dept_id))
