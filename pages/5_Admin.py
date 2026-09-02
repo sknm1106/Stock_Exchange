@@ -4,6 +4,8 @@ import sqlite3
 import tempfile
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(ROOT_DIR, "engineering_stock.db")
+
 if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
 
@@ -389,7 +391,7 @@ with tab_system:
     live_asset_rows = []
 
     for u in all_users:
-        if u["student_id"] == "admin777":
+        if u["student_id"] == "admin1463":
             continue
 
         summary = get_user_portfolio_summary(u["student_id"])
