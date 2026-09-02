@@ -30,8 +30,7 @@ try:
     # 2. 기존 9/1 이후 가격 기록 삭제
     cur.execute("""
         DELETE FROM price_history
-        WHERE timestamp >= ?
-    """, (START_TIME.strftime("%Y-%m-%d %H:%M:%S"),))
+    """)
 
     print(f"🗑️ 기존 9/1 이후 가격 기록 {cur.rowcount}건 삭제")
 
